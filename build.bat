@@ -2,7 +2,7 @@
 REM METABUILD - (c) 2025 FRINKnet & Friends - 0BSD
 
 REM THIS REPO
-set REPO=frinknet/metabuild
+set REPO=ghcr.io/frinknet/metabuild
 for /f "delims=/" %%i in ("%REPO%") do set IMAGE=%%i
 set WORKDIR=%cd%
 

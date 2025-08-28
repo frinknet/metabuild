@@ -2,7 +2,7 @@
 METABUILD := $(shell test -f /.dockerenv && echo 1)
 
 # Variables that change  
-REPO   ?= frinknet/metabuild
+REPO   ?= ghcr.io/frinknet/metabuild
 IMAGE  ?= metabuild
 ARCHES ?= x86 x64 arm arm64 wasm
 COMPS  ?= clang gcc tcc xcc osx win

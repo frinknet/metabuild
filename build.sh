@@ -4,7 +4,7 @@
 set -euo pipefail
 
 # THIS REPO
-REPO="frinknet/metabuild"
+REPO="ghcr.io/frinknet/metabuild"
 IMAGE="${REPO##*/}"
   
 # MAKE SURE WE HAVE A CONTAINER
