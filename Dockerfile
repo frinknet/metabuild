@@ -20,6 +20,7 @@ RUN apk add --no-cache \
 # Build XCC with prefix awareness, then rename during copy
 RUN git clone --depth 1 https://github.com/tyfkda/xcc.git /opt/xcc \
  && make -C /opt/xcc CC=clang \
+ && mkdir -p /usr/local/xcc/bin/ \
  && cp /opt/xcc/xcc /usr/local/xcc/bin/ \
  && cp /opt/xcc/cc1 /usr/local/xcc/bin/ \
  && cp /opt/xcc/cpp /usr/local/xcc/bin/ \
