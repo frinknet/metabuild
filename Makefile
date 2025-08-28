@@ -1,5 +1,6 @@
 # metabuild.mk - (c) 2025 FRINKnet & Friends - 0BSD
-include metabuild.mk
+-include /metabuild/metabuild.mk
+-include metabuild.mk
 
 # Project configuration
 PRJ ?= $(shell basename $(CURDIR))
@@ -139,7 +140,7 @@ endef
 $(foreach a,$(APPS),$(eval $(call MAKE_APP,$a)))
 
 # Create output directories
-$(OBJDIR) $(LIBOUTDIR) $(BINDIR):
+$(OBJDIR) $(LIBOUTDIR) $(BINDIR): $(SRCDIR)
 	@mkdir -p $@
 
 # Compile source files to objects  
