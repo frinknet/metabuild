@@ -15,8 +15,9 @@ RUN apk add --no-cache \
 	python3
 
 # Build XCC using GCC as bootstrap compiler
-RUN git clone --depth 1 https://github.com/tyfkda/xcc.git /opt/xcc && \
-	make -C /opt/xcc CC=clang && make -C /opt/xcc install PREFIX=/opt/xcc/out
+RUN git clone --depth 1 https://github.com/tyfkda/xcc.git /opt/xcc \
+ && make -C /opt/xcc CC=clang \
+ && cp /opt/xcc/xcc /usr/local/bin/ 
 
 # Download latest SDK, clone OSXCross, and build in the right order
 RUN LATEST_SDK=$(curl -s https://api.github.com/repos/joseluisq/macosx-sdks/releases/latest | \
