@@ -14,6 +14,7 @@ RUN apk add --no-cache \
 	libxml2-dev \
 	openssl-dev \
 	musl-fts-dev \
+	bsd-compat-headers \
 	python3
 
 # Build XCC using GCC as bootstrap compiler
