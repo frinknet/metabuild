@@ -19,12 +19,12 @@ RUN apk add --no-cache \
 
 # Build XCC with prefix awareness, then rename during copy
 RUN git clone --depth 1 https://github.com/tyfkda/xcc.git /opt/xcc \
- && make -C /opt/xcc CC=clang HOST_CC_PREFIX=xcc- \
- && cp /opt/xcc/xcc /usr/local/bin/ \
- && cp /opt/xcc/cc1 /usr/local/bin/xcc-cc1 \
- && cp /opt/xcc/cpp /usr/local/bin/xcc-cpp \
- && cp /opt/xcc/as /usr/local/bin/xcc-as \
- && cp /opt/xcc/ld /usr/local/bin/xcc-ld
+ && make -C /opt/xcc CC=clang \
+ && cp /opt/xcc/xcc /usr/local/xcc/bin/ \
+ && cp /opt/xcc/cc1 /usr/local/xcc/bin/ \
+ && cp /opt/xcc/cpp /usr/local/xcc/bin/ \
+ && cp /opt/xcc/as /usr/local/xcc/bin/ \
+ && cp /opt/xcc/ld /usr/local/xcc/bin/
 
 # Download latest SDK, clone OSXCross, and build in the right order
 RUN LATEST_SDK=$(curl -s https://api.github.com/repos/joseluisq/macosx-sdks/releases/latest | \
@@ -55,7 +55,7 @@ RUN apk add --no-cache \
 	bash-completion
 
 # Copy compiled tools
-COPY --from=build /usr/local/bin/xcc*	   /usr/local/bin/
+COPY --from=build /usr/local/xcc/*	   /usr/local/xcc/
 COPY --from=build /opt/osxcross/target/    /opt/osxcross/
 
 # Copy metabuild source
@@ -63,7 +63,7 @@ COPY . /metabuild
 
 # Set up bash environment
 RUN echo 'export PS1="\n\[\e[1;91m\]  \w \[\e[38;5;52m\]\$\[\e[0m\] "' >> /root/.bashrc && \
-	echo 'export PATH="/opt/osxcross/bin:/usr/local/bin:$PATH"' >> /root/.bashrc && \
+	echo 'export PATH="/opt/osxcross/bin:/usr/local/xcc/bin:/usr/local/bin:$PATH"' >> /root/.bashrc && \
 	wasm-tools completion bash >> /root/.bashrc
 
 # Create bootstrap entrypoint script
