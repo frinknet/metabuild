@@ -1,29 +1,28 @@
 name: Fix on Forking
 on: [push, workflow_dispatch]
 jobs:
-	fix-path:
-		runs-on: ubuntu-latest
-		permissions:
-			contents: write
-		steps:
-			- uses: actions/checkout@v4
-			- name: Patch if needed
-				run: |
-					# Replace ANY ghcr.io/xxx/yyy pattern with ghcr.io/${GITHUB_REPOSITORY}
-					find metabuild.mk build.sh build.bat -type f \
-						-exec sed -i -E "s#ghcr\.io/[a-zA-Z0-9_\-]+/[a-zA-Z0-9_\-]+#ghcr.io/${GITHUB_REPOSITORY}#g" {} +
-			- name: Commit on change
-				run: |
-					# Set bot identity for automated template fix
-					git config user.name "Fork Rename"
-					git config user.email "github-action@noreply.github.com"
-					# Detect changes (only staged files)
-					if ! git diff --quiet; then
-						echo "Updated image path—committing change."
-						git add metabuild.mk build.sh build.bat
-						git commit -m "Updated name on Forked Repo"
-						git push
-					else
-						echo "No changes needed: image path already matches repo."
-					fi
-
+  fix-path:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch if needed
+        run: |
+          # Replace ANY ghcr.io/xxx/yyy pattern with ghcr.io/${GITHUB_REPOSITORY}
+          find metabuild.mk build.sh build.bat -type f \
+            -exec sed -i -E "s#ghcr\.io/[a-zA-Z0-9_\-]+/[a-zA-Z0-9_\-]+#ghcr.io/${GITHUB_REPOSITORY}#g" {} +
+      - name: Commit on change
+        run: |
+          # Set bot identity for automated template fix
+          git config user.name "Fork Rename"
+          git config user.email "github-action@noreply.github.com"
+          # Detect changes (only staged files)
+          if ! git diff --quiet; then
+            echo "Updated image path—committing change."
+            git add metabuild.mk build.sh build.bat
+            git commit -m "Updated name on Forked Repo"
+            git push
+          else
+            echo "No changes needed: image path already matches repo."
+          fi

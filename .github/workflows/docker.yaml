@@ -1,4 +1,4 @@
-me: Publish Docker Image
+name: Publish Docker Image
 
 # ───────────────────────────────────────
 # 1 ▸ Trigger ONLY on tags (or manual run)
@@ -63,4 +63,3 @@ jobs:
           tags:   ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64,linux/arm64  # optional multi-arch
-
