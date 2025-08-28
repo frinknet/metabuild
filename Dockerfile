@@ -1,5 +1,6 @@
 # (c) 2025 FRINKnet & Friends - 0BSD licence
 FROM alpine:latest AS build
+
 # Install dependencies for OSXCross
 RUN apk add --no-cache \
 	bash \
@@ -10,7 +11,7 @@ RUN apk add --no-cache \
 	cmake \
 	llvm \
 	clang \
-	libxml2 \
+	libxml2-dev \
 	openssl \
 	python3
 
