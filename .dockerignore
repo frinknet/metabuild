@@ -1,0 +1,30 @@
+# --- .dockerignore -------------------------------------------------
+# 1. Source-control clutter
+.git
+*.swp
+*.swo
+
+# 2. Build artefacts
+out/
+obj/
+*.o
+*.a
+*.so
+*.d
+
+# 3. Editor & OS droppings
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# 4. Cache & deps you’ll re-fetch inside the image
+node_modules/
+__pycache__/
+*.py[co]
+
+# 5. Secrets
+*.env
+.aws/
+--------------------------------------------------------------------
+
