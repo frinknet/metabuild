@@ -31,15 +31,4 @@
 3. The top-level `Makefile` fans out over every `src/<app>/` folder and links an independent binary.  
 4. Tests compile the same way, spitting coloured ✓/✗ lines.  
 
-Everything else is implementation detail you can ignore until you care.
-
-[1](https://techdocs.broadcom.com/us/en/vmware-sde/telco-cloud/vmware-telco-cloud-automation/3-4/vmware-telco-cloud-automation-deployment-guide/migrating-tca-2-3-x-to-tca-3-0/migrating-vmware-telco-cloud-automation-/setup-migration-container/manual/docker-version-requirements.html)
-[2](https://techdocs.broadcom.com/us/en/vmware-sde/telco-cloud/vmware-telco-cloud-automation/3-1/vmware-telco-cloud-automation-deployment-guide/migrating-tca-2-3-x-to-tca-3-0/migrating-vmware-telco-cloud-automation-/setup-migration-container/manual/docker-version-requirements.html)
-[3](https://docs.docker.com/engine/install/)
-[4](https://docs.docker.com/desktop/release-notes/)
-[5](https://endoflife.date/docker-engine)
-[6](https://docs.docker.com/security/security-announcements/)
-[7](https://www.reddit.com/r/synology/comments/1j5l8tf/docker_engine_finally_updated_to_yet_another/)
-[8](https://www.youtube.com/watch?v=ZyBBv1JmnWQ)
-[9](https://sites.northwestern.edu/spsit/instructions/minimum-system-requirements-for-docker/)
-[10](https://www.docker.com/blog/docker-desktop-4-42-native-ipv6-built-in-mcp-and-better-model-packaging/)
+> We are working on a install system so you mostly can ignore this repo...
