@@ -17,10 +17,14 @@ RUN apk add --no-cache \
 	bsd-compat-headers \
 	python3
 
-# Build XCC using GCC as bootstrap compiler
+# Build XCC with prefix awareness, then rename during copy
 RUN git clone --depth 1 https://github.com/tyfkda/xcc.git /opt/xcc \
- && make -C /opt/xcc CC=clang \
- && cp /opt/xcc/xcc /usr/local/bin/ 
+ && make -C /opt/xcc CC=clang HOST_CC_PREFIX=xcc- \
+ && cp /opt/xcc/xcc /usr/local/bin/ \
+ && cp /opt/xcc/cc1 /usr/local/bin/xcc-cc1 \
+ && cp /opt/xcc/cpp /usr/local/bin/xcc-cpp \
+ && cp /opt/xcc/as /usr/local/bin/xcc-as \
+ && cp /opt/xcc/ld /usr/local/bin/xcc-ld
 
 # Download latest SDK, clone OSXCross, and build in the right order
 RUN LATEST_SDK=$(curl -s https://api.github.com/repos/joseluisq/macosx-sdks/releases/latest | \
@@ -51,7 +55,7 @@ RUN apk add --no-cache \
 	bash-completion
 
 # Copy compiled tools
-COPY --from=build /opt/xcc/out/		   /usr/local/
+COPY --from=build /usr/local/bin/xcc*	   /usr/local/bin/
 COPY --from=build /opt/osxcross/target/    /opt/osxcross/
 
 # Copy metabuild source
