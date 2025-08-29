@@ -42,21 +42,19 @@ FROM alpine:latest
 # Install cross-compilation support
 RUN apk add --no-cache \
 	tcc \
-	build-base \
 	make \
 	git \
 	llvm \
 	lld \
 	clang \
-	mingw-w64-gcc \
-	libxml2-dev \
-	openssl-dev \
-	python3 \
+	libxml2 \
+	openssl \
 	wasm-tools \
+	mingw-w64-gcc \
 	bash-completion
 
 # Copy compiled tools
-COPY --from=build /usr/local/xcc/*	   /usr/local/xcc/
+COPY --from=build /usr/local/xcc/	   /usr/local/xcc/
 COPY --from=build /opt/osxcross/target/    /opt/osxcross/
 
 # Copy metabuild source
@@ -72,31 +70,30 @@ RUN cat > /bin/metabuild <<'EOF' && chmod +x /bin/metabuild
 #!/bin/bash
 set -e
 
+cd  /work
+
 # Bootstrap project files if they don't exist
-if [[ ! -f /work/Makefile && -f /metabuild/Makefile ]]; then
-	echo "Bootstrapping Makefile from /metabuild"
-	cp /metabuild/Makefile /work/
-fi
+RUN cat > /bin/metabuild <<'EOF' && chmod +x /bin/metabuild
+#!/bin/bash
+set -e
 
-if [[ ! -f /work/build.sh && -f /metabuild/build.sh ]]; then
-	echo "Bootstrapping build.sh from /metabuild"
-	cp /metabuild/build.sh /work/
-fi
-
-if [[ ! -f /work/build.bat && -f /metabuild/build.bat ]]; then
-	echo "Bootstrapping build.bat from /metabuild"
-	cp /metabuild/build.bat /work/
-fi
-
-if [[ ! -d /work/.metabuild && -d /metabuild/.metabuild ]]; then
-	echo "Bootstrapping .metabuild directory from /metabuild"
-	cp -r /metabuild/.metabuild /work/
-fi
-
-# Run make with all arguments
 cd /work
+
+if [[ ! -f Makefile ]]; then
+	cp /metabuild/Makefile .
+fi
+if [[ ! -f build.sh ]]; then
+	cp /metabuild/build.sh .
+fi
+if [[ ! -f build.bat ]]; then
+	cp /metabuild/build.bat .
+fi
+if [[ ! -f /work/.metabuild/metabuild.mk ]]; then
+	mkdir -p .metabuild/
+	cp -r /metabuild/*.mk .metabuild/
+fi
+
 exec make "$@"
 EOF
 
-WORKDIR /work
 ENTRYPOINT ["/bin/metabuild"]

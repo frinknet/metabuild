@@ -6,21 +6,26 @@ PREFIX="${HOME}/bin"
 # Is prefix in path
 mkdir -p "$PREFIX"
 case ":$PATH:" in
-	"$PREFIX":*) ;;
-	*:"$PREFIX":*) ;;
-	*:"$PREFIX") ;;
-	*) echo "export PATH=\"$PREFIX:\$PATH\"" >> "$HOME/.bashrc"; . "$HOME/.bashrc";;
+  "$PREFIX":*) ;;
+  *:"$PREFIX":*) ;;
+  *:"$PREFIX") ;;
+  *) echo "export PATH=\"$PREFIX:\$PATH\"" >> "$HOME/.bashrc"; . "$HOME/.bashrc";;
 esac
 
 # Pull the container
 if ! docker pull "$REPO:latest"; then
-	echo "could not pull docker container $REPO:latest"
+  echo "could not pull docker container $REPO:latest"
+
+  exit 1
 fi
+
+# Tag image
+docker tag "$REPO:latest" "$IMAGE"
 
 # Create a shell wrapper
 cat > "$PREFIX/$IMAGE" <<EOF
 #!/bin/sh
-exec docker run --rm -it -v "\$(pwd):/work" $REPO "\$@"
+exec docker run --rm -it -v "\$(pwd):/work" $IMAGE "\$@"
 EOF
 
 # Make executable
