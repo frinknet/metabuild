@@ -1,4 +1,4 @@
-# Metabuild 2025  
+# Metabuild  
 *Zero-to-hero, cross-platform build cocoon*  
 
 > **Prerequisite:** a working installation of **Docker Instalation** (any recent 24-plus release on macOS, Windows, or modern Linux). That’s it.
