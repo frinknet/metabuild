@@ -13,6 +13,27 @@
 ## Someone has to keep the runtime honest...
 > **Prerequisite:** a working installation of **Docker Instalation** (any recent 24-plus release on macOS, Windows, or modern Linux). That’s it!!! — *Now go forth and `make` without fear — your local machine remains pristine.*
 
+To install you simply run:
+
+Unix/Linux/macOS:
+```bash
+curl -L https://github.com/frinknet/metabuild/raw/main/install.sh | sh
+```
+
+Windows:
+```powershell
+iex (iwr https://github.com/frinknet/metabuild/raw/main/install.bat).Content
+```
+
+Docker (for the curious):
+```sh
+docker pull ghcr.io/frinknet/metabuild:latest
+docker tag ghcr.io/frinknet/metabuild:latest metabuild
+echo '#/bin/sh\ndocker run --rm -it -u $(id -u):$(id -g) -v "$(pwd):/build" metabuild "$@"' > metabuild.sh
+chmod +x metabuild.sh
+```
+
+
 
 # Zero Config Needed
 Makefiles suck when you have to hand write them by hand. But `CMake`, `Ninja`, `waf`, and their kin suck more. We give you a premium Makefile to start with with testing and multi-arch builds. To use the builtin `Makefile` just make sure your files structure follows our exact directory pattern. Right now this only works for C and C++. However, We are planning to expand this to Go and Rust soon.
