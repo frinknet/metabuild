@@ -56,6 +56,6 @@ Makefiles suck when you have to hand write them by hand. But `CMake`, `Ninja`, `
 
 You can change the internal Makefiles to your liking using our `metabuild extend`. This Installs the Makefile locally so you can hack it up however you need. We prefer your makefile over ours so you can do as you need.
 
-Additionally, you can install  just the build scripts with `metabuild init` although our system will work fine without it. But that way youcan ship your project with a buildscript that just works.
+Additionally, you can install just the build scripts with `metabuild init` although our system will work fine without it. But that way youcan ship your project with a buildscript that just works. This is the recomended use case for professional projects.
 
 You can also fork this repo and hack the entire system. All of the github actions are generic so your for will build its own container automatically. However, you may need to go into Github and make your package container public after the first build.
