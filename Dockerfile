@@ -70,14 +70,7 @@ RUN cat > /bin/metabuild <<'EOF' && chmod +x /bin/metabuild
 #!/bin/bash
 set -e
 
-cd  /work
-
-# Bootstrap project files if they don't exist
-RUN cat > /bin/metabuild <<'EOF' && chmod +x /bin/metabuild
-#!/bin/bash
-set -e
-
-cd /work
+cd /build
 
 if [[ ! -f Makefile ]]; then
 	cp /metabuild/Makefile .
@@ -88,7 +81,7 @@ fi
 if [[ ! -f build.bat ]]; then
 	cp /metabuild/build.bat .
 fi
-if [[ ! -f /work/.metabuild/metabuild.mk ]]; then
+if [[ ! -f /build/.metabuild/metabuild.mk ]]; then
 	mkdir -p .metabuild/
 	cp -r /metabuild/*.mk .metabuild/
 fi
@@ -96,4 +89,5 @@ fi
 exec make "$@"
 EOF
 
+WORKDIR /build
 ENTRYPOINT ["/bin/metabuild"]

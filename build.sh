@@ -18,4 +18,4 @@ if ! docker image inspect "$IMAGE" &>/dev/null; then
 fi
 
 # MAKE SURE WE HAVE A CONTAINER
-exec docker run --rm -it -v "$PWD":/work "$IMAGE" "$@"
+exec docker run --rm -it -v "$PWD":/build "$IMAGE" "$@"

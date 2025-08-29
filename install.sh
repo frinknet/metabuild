@@ -25,7 +25,7 @@ docker tag "$REPO:latest" "$IMAGE"
 # Create a shell wrapper
 cat > "$PREFIX/$IMAGE" <<EOF
 #!/bin/sh
-exec docker run --rm -it -v "\$(pwd):/work" $IMAGE "\$@"
+exec docker run --rm -it -v "\$(pwd):/build" $IMAGE "\$@"
 EOF
 
 # Make executable
@@ -33,7 +33,7 @@ chmod +x "$PREFIX/$IMAGE"
 
 # Report what you did
 echo
-echo "✓ metabuild installed: $PREFIX/$IMAGE"
+echo "✓ installed: $PREFIX/$IMAGE"
 echo
 echo "Run 'metabuild init' to get started."
 echo

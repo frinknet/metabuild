@@ -20,4 +20,4 @@ if errorlevel 1 (
 )
 
 REM MAKE SURE WE HAVE A CONTAINER
-docker run --rm -it -v "%WORKDIR%:/work" %IMAGE% %*
+docker run --rm -it -v "%WORKDIR%:/build" %IMAGE% %*

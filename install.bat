@@ -7,7 +7,7 @@ if errorlevel 1 echo ERROR: Could not pull docker container %REPO%:latest
 
 REM Drop CLI wrapper in the right place
 echo @echo off > "%USERPROFILE%\%IMAGE%.bat"
-echo docker run --rm -it -v "%%cd%%:/work" %REPO% %%* >> "%WINAPPS%\%IMAGE%.bat"
+echo docker run --rm -it -v "%%cd%%:/build" %REPO% %%* >> "%WINAPPS%\%IMAGE%.bat"
 
 REM Report success
 echo.
