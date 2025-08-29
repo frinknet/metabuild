@@ -25,9 +25,18 @@ if errorlevel 1 (
 REM Tag image (simply same name on Windows, adjust if needed)
 docker tag %REPO%:latest %IMAGE%
 
+REM Extract GitHub repo path once
+for /f "tokens=2,* delims=/" %%A in ("%REPO%") do set GITHUB_REPO=%%A/%%B
+
 REM Create a shell wrapper batch file
-echo @echo off > "%PREFIX%\%IMAGE%.bat"
-echo docker run --rm -it -v "%%cd%%:/build" %IMAGE% %%* >> "%PREFIX%\%IMAGE%.bat"
+(
+    echo @echo off
+    echo if "%%1"=="update" (
+    echo     powershell -Command "iex (iwr https://github.com/%GITHUB_REPO%/raw/main/install.bat).Content"
+    echo     exit /b
+    echo )
+    echo docker run --rm -it -v "%%cd%%:/build" %IMAGE% %%*
+) > "%PREFIX%\%IMAGE%.bat"
 
 REM Make executable is automatic for batch (just ensure written)
 

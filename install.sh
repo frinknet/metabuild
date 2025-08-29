@@ -25,7 +25,11 @@ docker tag "$REPO:latest" "$IMAGE"
 # Create a shell wrapper
 cat > "$PREFIX/$IMAGE" <<EOF
 #!/bin/sh
-exec docker run --rm -it -u $(id -u):$(id -g) -v "\$(pwd):/build" $IMAGE "\$@"
+if [ "$1" = "update" ]; then
+  exec curl -L https://github.com/${REPO#*/}/raw/main/install.sh | sh
+else
+  exec docker run --rm -it -u $(id -u):$(id -g) -v "\$(pwd):/build" $IMAGE "\$@"
+fi
 EOF
 
 # Make executable
