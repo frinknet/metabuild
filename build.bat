@@ -1,23 +1,31 @@
 @echo off
 REM METABUILD - (c) 2025 FRINKnet & Friends - 0BSD
 
-REM THIS REPO
+setlocal enabledelayedexpansion
+
 set REPO=ghcr.io/frinknet/metabuild
-for /f "delims=/" %%i in ("%REPO%") do set IMAGE=%%i
+for %%i in ("%REPO%") do set IMAGE=metabuild
 set WORKDIR=%cd%
 
-REM MAKE SURE WE HAVE A CONTAINER
+REM Check for existing Docker image
 docker image inspect %IMAGE% >nul 2>&1
 if errorlevel 1 (
-  docker pull %REPO%:latest >nul 2>&1
-
-  if errorlevel 1 (
-    echo ^>^>^> Building Docker Image: %IMAGE%
-    docker build -t %IMAGE% .
-  ) else (
-    docker tag %REPO%:latest %IMAGE%
-  )
+    REM Try to pull
+    docker pull %REPO%:latest >nul 2>&1
+    if errorlevel 1 (
+	echo ^>^>^> Building Docker Image: %IMAGE%
+	docker build -t %IMAGE% .
+    ) else (
+	docker tag %REPO%:latest %IMAGE%
+    )
 )
 
-REM MAKE SURE WE HAVE A CONTAINER
-docker run --rm -it -v "%WORKDIR%:/build" %IMAGE% %*
+REM Argument parsing: if %1 is "cli"
+if "%1"=="cli" (
+    shift
+    docker run --rm -it -v "%WORKDIR%:/build" --entrypoint bash %IMAGE% %*
+) else (
+    docker run --rm -it -v "%WORKDIR%:/build" %IMAGE% %*
+)
+
+endlocal

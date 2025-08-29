@@ -1,6 +1,5 @@
-# metabuild.mk - (c) 2025 FRINKnet & Friends - 0BSD
--include /metabuild/metabuild.mk
--include metabuild.mk
+# METABUILD - (c) 2025 FRINKnet & Friends - 0BSD
+VPATH = $(CURDIR):$(CURDIR)/.metabuild:.
 
 # Project configuration
 PRJ ?= $(shell basename $(CURDIR))
@@ -32,12 +31,20 @@ SRCS := $(shell find $(SRCDIR) -name '*.c' -o -name '*.cpp' -o -name '*.cc')
 OBJS := $(SRCS:$(SRCDIR)/%=$(OBJDIR)/%.o)
 DEPS := $(OBJS:.o=.d)
 
+# Makefile extensions
+MKEX := $(CURDIR)/.metabuild/metabuild.mk
+MKFS := $(filter-out $(MKEX),$(wildcard $(CURDIR)/.metabuild/*.mk))
+
 # Library sources (separate from main sources)
 LIBSRCS  := $(shell find $(LIBDIR) -name '*.c' -o -name '*.cpp' -o -name '*.cc')
 LIBOBJS  := $(LIBSRCS:$(LIBDIR)/%=$(OBJDIR)/lib/%.o)
 
+include metabuild.mk
+
 # Default target
 .DEFAULT_GOAL := all
+
+include $(MKFS)
 
 # Initialize submodules
 submodules:

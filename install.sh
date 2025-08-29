@@ -25,7 +25,7 @@ docker tag "$REPO:latest" "$IMAGE"
 # Create a shell wrapper
 cat > "$PREFIX/$IMAGE" <<EOF
 #!/bin/sh
-exec docker run --rm -it -v "\$(pwd):/build" $IMAGE "\$@"
+exec docker run --rm -it -u $(id -u):$(id -g) -v "\$(pwd):/build" $IMAGE "\$@"
 EOF
 
 # Make executable

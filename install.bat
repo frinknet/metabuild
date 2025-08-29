@@ -1,17 +1,39 @@
 @echo off
 setlocal
 
-REM Pull docker container
+set REPO=ghcr.io/frinknet/metabuild
+for %%A in (%REPO%) do set IMAGE=metabuild
+set PREFIX=%USERPROFILE%\bin
+
+REM Ensure PREFIX exists (mkdir equivalent)
+if not exist "%PREFIX%" mkdir "%PREFIX%"
+
+REM Check if PREFIX in PATH
+echo %PATH% | find /I "%PREFIX%" >nul
+if errorlevel 1 (
+    echo set PATH=%PREFIX%;%%PATH%%>>"%USERPROFILE%\add_to_path.bat"
+    call "%USERPROFILE%\add_to_path.bat"
+)
+
+REM Pull container
 docker pull %REPO%:latest
-if errorlevel 1 echo ERROR: Could not pull docker container %REPO%:latest
+if errorlevel 1 (
+    echo ERROR: Could not pull docker container %REPO%:latest
+    exit /b 1
+)
 
-REM Drop CLI wrapper in the right place
-echo @echo off > "%USERPROFILE%\%IMAGE%.bat"
-echo docker run --rm -it -v "%%cd%%:/build" %REPO% %%* >> "%WINAPPS%\%IMAGE%.bat"
+REM Tag image (simply same name on Windows, adjust if needed)
+docker tag %REPO%:latest %IMAGE%
 
-REM Report success
+REM Create a shell wrapper batch file
+echo @echo off > "%PREFIX%\%IMAGE%.bat"
+echo docker run --rm -it -v "%%cd%%:/build" %IMAGE% %%* >> "%PREFIX%\%IMAGE%.bat"
+
+REM Make executable is automatic for batch (just ensure written)
+
+REM Report
 echo.
-echo ^✓ metabuild installed: %USERPROFILE%\%IMAGE%.bat
+echo ^✓ installed: %PREFIX%\%IMAGE%.bat
 echo.
 echo Run "metabuild init" to get started.
 echo.

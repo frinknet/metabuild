@@ -17,5 +17,10 @@ if ! docker image inspect "$IMAGE" &>/dev/null; then
   fi
 fi
 
-# MAKE SURE WE HAVE A CONTAINER
-exec docker run --rm -it -v "$PWD":/build "$IMAGE" "$@"
+# NOW USE IT
+if [ "$1" = "cli" ]; then
+  shift
+  exec docker run --rm -it -u $(id -u):$(id -g) -v "\$(pwd):/build" --entrypoint bash $IMAGE "\$@"
+else
+  exec docker run --rm -it -u $(id -u):$(id -g) -v "\$(pwd):/build" $IMAGE "$@"
+fi
