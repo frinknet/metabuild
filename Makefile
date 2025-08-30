@@ -46,7 +46,6 @@ LIB_HEADER_DIRS := $(shell find $(LIBDIR) -mindepth 1 -type d -exec test -e "{}/
 CFLAGS += $(addprefix -I,$(LIB_HEADER_DIRS))
 CXXFLAGS += $(addprefix -I,$(LIB_HEADER_DIRS))
 
-
 # Find all source files (recursively in src/)
 SRCS := $(shell find $(SRCDIR) -name '*.c' -o -name '*.cpp' -o -name '*.cc')
 OBJS := $(SRCS:$(SRCDIR)/%=$(OBJDIR)/%.o)
@@ -71,10 +70,8 @@ include $(MKFS)
 submodules:
 	@git submodule update --init --depth=1
 
-
 # Discover all directories containing C files (including root and nested)
 SRCDIRS := $(shell find $(SRCDIR) -path "$(TPLDIR)" -prune -o -type f -name '*.c' -print | xargs -r dirname | sort -u | sed 's|^$(SRCDIR)||' | sed 's|^/||' | sed 's|^$$|.|')
-
 
 # Function to check if directory contains main()
 define HAS_MAIN
@@ -197,8 +194,6 @@ endif
 
 clean:
 	@rm -rf $(OUTDIR)
-
-.PHONY: all lib clean new submodule template-list shared
 
 # Include dependency files
 -include $(DEPS)
