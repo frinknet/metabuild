@@ -43,6 +43,7 @@ FROM alpine:latest
 RUN apk add --no-cache \
 	tcc \
 	make \
+	cmake \
 	git \
 	llvm \
 	lld \
