@@ -22,13 +22,9 @@ jobs:
           filters: |
             core:
               - 'Dockerfile.core'
-              - 'build.sh'
-              - 'install.sh'
             multi:
               - 'Dockerfile.multi'
               - 'Dockerfile.core'
-              - 'build.sh'
-              - 'install.sh'
 
   # Build core base image only if relevant files changed
   build-core:
