@@ -88,14 +88,12 @@ else
 	LIBSUFFIX := .so
 endif
 
-# Matrix target generation (fixed variable refs)
-$(foreach A,$(ARCHES),$(foreach C,$(COMPS),$(eval $(C)-$(A):
-	@$$(MAKE) all ARCH=$(A) COMP=$(C))))
+# Matrix target generation
+$(foreach A,$(ARCHES),$(foreach C,$(COMPS),$(eval $(C)-$(A): ; @$$(MAKE) all ARCH=$(A) COMP=$(C))))
 
-# Per-target matrix (T must be defined by caller)
+# Per-target matrix
 ifdef T
-$(foreach A,$(ARCHES),$(foreach C,$(COMPS),$(eval $(C)-$(A)-$(T):
-	@$$(MAKE) $(T) ARCH=$(A) COMP=$(C))))
+$(foreach A,$(ARCHES),$(foreach C,$(COMPS),$(eval $(C)-$(A)-$(T): ; @$$(MAKE) $(T) ARCH=$(A) COMP=$(C))))
 endif
 
 # Show available targets
