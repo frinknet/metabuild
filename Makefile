@@ -73,7 +73,7 @@ submodules:
 	@git submodule update --init --depth=1
 
 version:
-	@echo /metabuild/VERSION
+	@cat /metabuild/VERSION
 
 # Get all directories containing C files (excluding templates)
 SRCDIRS := $(shell \
@@ -149,13 +149,12 @@ endif
 endef
 
 $(foreach bin,$(BINDIRS),$(eval $(call MAKE_BIN,$(bin))))
-$(foreach lib,$(LIBDIRS),$(eval $(call MAKE_LIB,$(lib))))
 
 # Create subdirectories in object tree
 $(foreach dir,$(filter-out .,$(SRCDIRS)),$(eval $$(OBJDIR)/$(dir): ; @mkdir -p $$@))
 
 # Create output directories
-$(OBJDIR) $(LNKDIR) $(BINDIR): $(SRCDIR)
+$(OBJDIR) $(LNKDIR) $(BINDIR):
 	@mkdir -p $@
 
 # Compile source files to objects (with PIC for shared lib support)
@@ -190,13 +189,16 @@ $(OBJDIR)/lib/%.cc.o: $(LIBDIR)/%.cc | $(OBJDIR)
 	@echo GEN $@
 	@$(CXX) $(CXXFLAGS) -MMD -MP -c $< -o $@
 
+# Generate static library rules
+$(foreach lib,$(filter-out .,$(LIBDIRS)),$(eval $(call MAKE_LIB,$(lib))))
+
 # Create static library
 $(LNKDIR)/$(PRJ).a: $(LIBOBJS) | $(LNKDIR)
 	@echo GEN $@
 	@$(AR) rcs $@ $^
 
-# Generate shared library rules (but don't build by default)
-$(foreach lib,$(LIBDIRS),$(eval $(call MAKE_SHARED_LIB,$(lib))))
+# Generate shared library rules
+$(foreach lib,$(filter-out .,$(LIBDIRS)),$(eval $(call MAKE_SHARED_LIB,$(lib))))
 
 # Shared version of external lib
 $(LNKDIR)/$(PRJ)$(LIBSUFFIX): $(LIBOBJS) | $(LNKDIR)
