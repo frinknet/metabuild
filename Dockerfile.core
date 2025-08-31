@@ -27,8 +27,8 @@ RUN git clone --depth 1 https://github.com/tyfkda/xcc.git /opt/xcc \
  && rm -rf /opt/xcc
 
 # Set up shell environment
-RUN echo 'export PS1="\n\[\e[1;91m\]\t\w \[\e[38;5;52m\]\$\[\e[0m\] "' >> /root/.bashrc && \
-    echo 'export PATH="/usr/local/xcc/bin:/usr/local/bin:$PATH"' >> /root/.bashrc && \
-    wasm-tools completion bash >> /root/.bashrc
+RUN echo "trap echo DEBUG"	 >> /root/.bashrc && \
+	echo 'export PS1="\n\[\e[1;91m\]  \w \[\e[38;5;52m\]\$\[\e[0m\] \[\e]12;#999900\007\]\[\e]12;#999900\007\]\[\e[3 q\]"' >> /root/.bashrc && \
+	wasm-tools completion bash >> /root/.bashrc
 
 WORKDIR /build
