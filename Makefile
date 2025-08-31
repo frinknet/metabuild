@@ -38,7 +38,7 @@ CFLAGS += $(addprefix -I,$(LIB_HEADER_DIRS))
 CXXFLAGS += $(addprefix -I,$(LIB_HEADER_DIRS))
 
 # Find all source files (recursively in src/)
-SRCS := $(shell find $(SRCDIR) -name '*.c' -o -name '*.cpp' -o -name '*.cc')
+SRCS := $(shell [ -d "$(SRCDIR)" ] && find $(SRCDIR) -name '*.c' -o -name '*.cpp' -o -name '*.cc')
 OBJS := $(SRCS:$(SRCDIR)/%=$(OBJDIR)/%.o)
 DEPS := $(OBJS:.o=.d)
 
