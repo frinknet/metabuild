@@ -9,7 +9,7 @@ on:
 
 jobs:
   # Check what files changed to decide which base images to build
-  find-change:
+  find-changes:
     runs-on: ubuntu-latest
     outputs:
       core: ${{ steps.changes.outputs.core }}
@@ -37,14 +37,14 @@ jobs:
             echo "multi=false" >> $GITHUB_OUTPUT
           fi
           
-          echo "Core changed: $(echo $GITHUB_OUTPUT | grep core= | cut -d= -f2)"
-          echo "Multi changed: $(echo $GITHUB_OUTPUT | grep multi= | cut -d= -f2)"
+          echo "Core changed: $(grep 'core=' $GITHUB_OUTPUT | cut -d= -f2)"
+          echo "Multi changed: $(grep 'multi=' $GITHUB_OUTPUT | cut -d= -f2)"
 
 
   # Build core base image only if relevant files changed
   build-core:
     needs: find-changes
-    if: ${{ needs.find-changes.outputs.core == 'true' || github.event_name == 'workflow_dispatch' }}
+    if: needs.find-changes.outputs.core == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -78,8 +78,8 @@ jobs:
 
   # Build multi base image only if relevant files changed
   build-multi:
-    needs: [changes, build-core]
-    if: ${{ always() && (needs.find-changes.outputs.multi == 'true' || github.event_name == 'workflow_dispatch') }}
+    needs: [find-changes, build-core]
+    if: always() && (needs.find-changes.outputs.multi == 'true' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -114,7 +114,7 @@ jobs:
   # Always build lite image (includes metabuild source changes)
   build-lite:
     needs: [build-core]
-    if: ${{ always() && !failure() }}
+    if: always() && !failure()
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -159,7 +159,7 @@ jobs:
   # Always build full image (includes metabuild source changes)
   build-full:
     needs: [build-multi]
-    if: ${{ always() && !failure() }}
+    if: always() && !failure()
     runs-on: ubuntu-latest
     permissions:
       contents: read
