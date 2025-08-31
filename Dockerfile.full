@@ -6,6 +6,6 @@ FROM ${BASE_IMAGE}
 COPY . /metabuild
 
 # Create bootstrap entrypoint script
-RUN ln /metabuild/entrypoint.sh /bin/metabuild
+RUN mv /metabuild/entrypoint.sh /bin/metabuild
 
 ENTRYPOINT ["/bin/metabuild"]
