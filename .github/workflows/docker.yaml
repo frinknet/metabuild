@@ -1,192 +1,74 @@
-name: Publish Docker
+name: Publish Docker Image
 
 on:
   push:
     tags:
       - 'v*'
       - '*'
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      force_base_build:
+        description: 'Force rebuild of base images'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
-  # Check what files changed to decide which base images to build
   changes:
     runs-on: ubuntu-latest
     outputs:
-      core: ${{ steps.changes.outputs.core }}
-      multi: ${{ steps.changes.outputs.multi }}
+      base_build_needed: ${{ steps.decide.outputs.base_build_needed }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # Required for change detection
+      
       - uses: dorny/paths-filter@v2
         id: changes
         with:
           filters: |
-            core:
+            base_files:
               - 'Dockerfile.core'
-              - 'build.sh'
-              - 'install.sh'
-            multi:
               - 'Dockerfile.multi'
-              - 'Dockerfile.core'
               - 'build.sh'
               - 'install.sh'
+      
+      - name: Debug changed files
+        run: |
+          echo "🔍 Change detection results:"
+          echo "base_files: ${{ steps.changes.outputs.base_files }}"
+          echo "Changed files in this push:"
+          git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "No diff available"
+      
+      - name: Determine if base build needed
+        id: decide
+        run: |
+          if [[ "${{ inputs.force_base_build }}" == "true" ]]; then
+            echo "base_build_needed=true" >> $GITHUB_OUTPUT
+            echo "✅ Base build forced via input"
+          elif [[ "${{ steps.changes.outputs.base_files }}" == 'true' ]]; then
+            echo "base_build_needed=true" >> $GITHUB_OUTPUT
+            echo "✅ Base build needed - files changed"
+          else
+            echo "base_build_needed=false" >> $GITHUB_OUTPUT
+            echo "❌ No base build needed"
+          fi
 
-  # Build core base image only if relevant files changed
   build-core:
     needs: changes
-    if: ${{ needs.changes.outputs.core == 'true' || github.event_name == 'workflow_dispatch' }}
+    if: ${{ needs.changes.outputs.base_build_needed == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
-    env:
-      IMAGE_NAME: ghcr.io/${{ github.repository }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Set up Buildx
-        uses: docker/setup-buildx-action@v3
-      
-      - name: Login to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Build and push core image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: Dockerfile.core
-          push: true
-          tags: ${{ env.IMAGE_NAME }}-core:latest
-          platforms: linux/amd64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+    # ... rest of your build steps
 
-  # Build multi base image only if relevant files changed
   build-multi:
     needs: [changes, build-core]
-    if: ${{ always() && (needs.changes.outputs.multi == 'true' || github.event_name == 'workflow_dispatch') }}
+    if: ${{ needs.changes.outputs.base_build_needed == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
-    env:
-      IMAGE_NAME: ghcr.io/${{ github.repository }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Set up Buildx
-        uses: docker/setup-buildx-action@v3
-      
-      - name: Login to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Build and push multi image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: Dockerfile.multi
-          push: true
-          tags: ${{ env.IMAGE_NAME }}-multi:latest
-          platforms: linux/amd64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  # Always build lite image (includes metabuild source changes)
-  build-lite:
-    needs: [build-core]
-    if: ${{ always() && !failure() }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    env:
-      IMAGE_NAME: ghcr.io/${{ github.repository }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Docker metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.IMAGE_NAME }}
-          tags: |
-            type=ref,event=tag,suffix=-lite
-            type=raw,value=lite
-      
-      - name: Set up Buildx
-        uses: docker/setup-buildx-action@v3
-      
-      - name: Login to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Build and push lite image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: Dockerfile.lite
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          platforms: linux/amd64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  # Always build full image (includes metabuild source changes)
-  build-full:
-    needs: [build-multi]
-    if: ${{ always() && !failure() }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    env:
-      IMAGE_NAME: ghcr.io/${{ github.repository }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Docker metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.IMAGE_NAME }}
-          tags: |
-            type=ref,event=tag
-            type=raw,value=latest
-      
-      - name: Set up Buildx
-        uses: docker/setup-buildx-action@v3
-      
-      - name: Login to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Build and push full image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: Dockerfile.full
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          platforms: linux/amd64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+    # ... rest of your build steps
 
