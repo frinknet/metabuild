@@ -69,6 +69,25 @@ $(if $($(COMP).$(ARCH)),,$(error Unknown arch '$(ARCH)' for '$(COMP)'))
 endif
 endif
 
+# Target platform detection based on cross-compiler
+ifeq ($(COMP),win)
+	TARGET_PLATFORM := Windows
+	EXESUFFIX := .exe
+	LIBSUFFIX := .dll
+else ifeq ($(COMP),osx)
+	TARGET_PLATFORM := macOS
+	EXESUFFIX :=
+	LIBSUFFIX := .dylib
+else ifeq ($(ARCH),wasm)
+	TARGET_PLATFORM := WebAssembly
+	EXESUFFIX := .wasm
+	LIBSUFFIX := 
+else
+	TARGET_PLATFORM := Linux
+	EXESUFFIX :=
+	LIBSUFFIX := .so
+endif
+
 # Matrix target generation (fixed variable refs)
 $(foreach A,$(ARCHES),$(foreach C,$(COMPS),$(eval $(C)-$(A):
 	@$$(MAKE) all ARCH=$(A) COMP=$(C))))
@@ -80,9 +99,10 @@ $(foreach A,$(ARCHES),$(foreach C,$(COMPS),$(eval $(C)-$(A)-$(T):
 endif
 
 # Show available targets
-target-list:
+targets:
 	@echo "Available targets:"
 	@$(foreach A,$(ARCHES),$(foreach C,$(COMPS),echo "	$(C)-$(A)";))
+
 
 # Diagnostic info  
 info:
@@ -90,6 +110,9 @@ info:
 	@echo "CC: $(CC)"
 	@echo "CXX: $(CXX)" 
 	@echo "TARGET: $(TARGET)"
+	@echo "TARGET_PLATFORM: $(TARGET_PLATFORM)"
+	@echo "EXESUFFIX: $(EXESUFFIX)"
+	@echo "LIBSUFFIX: $(LIBSUFFIX)"
 	@echo "CFLAGS: $(CFLAGS)"
 
-.PHONY: target-list info
+.PHONY: targets info

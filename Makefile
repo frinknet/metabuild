@@ -22,15 +22,6 @@ UNITDIR	 := $(TESTDIR)/unit
 CASEDIR	 := $(TESTDIR)/case
 LOADDIR := $(TESTDIR)/load
 
-# Platform detection for file extensions
-ifeq ($(OS),Windows_NT)
-	EXESUFFIX := .exe
-	LIBSUFFIX := .dll
-else
-	EXESUFFIX :=
-	LIBSUFFIX := .so
-endif
-
 # Add SYSDIR only if it exists
 ifneq ($(wildcard $(SYSDIR)),)
 	CFLAGS	 += -isystem $(SYSDIR)
