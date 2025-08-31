@@ -26,7 +26,7 @@ docker tag "$REPO:$VER" "$IMAGE"
 # Create a shell wrapper
 cat > "$PREFIX/$IMAGE" <<EOF
 #!/bin/sh
-if [ "$1" = "update" ]; then
+if [ "\$1" = "update" ]; then
   exec curl -L https://github.com/${REPO#*/}/raw/main/install.sh | sh -s -- $VER
 else
   exec docker run --rm -it -u $(id -u):$(id -g) -v "\$(pwd):/build" $IMAGE "\$@"
