@@ -29,11 +29,26 @@ Docker (for the curious):
 ```sh
 docker pull ghcr.io/frinknet/metabuild:latest
 docker tag ghcr.io/frinknet/metabuild:latest metabuild
-echo '#/bin/sh\ndocker run --rm -it -u $(id -u):$(id -g) -v "$(pwd):/build" metabuild "$@"' > metabuild.sh
+echo -e '#/bin/sh\ndocker run --rm -it -u $(id -u):$(id -g) -v "$(pwd):/build" metabuild "$@"' > metabuild.sh
 chmod +x metabuild.sh
 ```
 
+Or for the lite version:
 
+```bash
+curl -L https://github.com/frinknet/metabuild/raw/main/install.sh | sh -s -- lite
+```
+
+```powershell
+iex ((iwr 'https://github.com/frinknet/metabuild/raw/main/install.bat').Content + ' lite')
+```
+
+```sh
+docker pull ghcr.io/frinknet/metabuild:lite
+docker tag ghcr.io/frinknet/metabuild:lite metabuild
+echo -e '#/bin/sh\ndocker run --rm -it -u $(id -u):$(id -g) -v "$(pwd):/build" metabuild "$@"' > metabuild.sh
+chmod +x metabuild.sh
+```
 
 # Zero Config Needed
 Makefiles suck when you have to hand write them by hand. But `CMake`, `Ninja`, `waf`, and their kin suck more. We give you a premium Makefile to start with with testing and multi-arch builds. To use the builtin `Makefile` just make sure your files structure follows our exact directory pattern. Right now this only works for C and C++. However, We are planning to expand this to Go and Rust soon.
