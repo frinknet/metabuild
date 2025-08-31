@@ -89,9 +89,10 @@ test-line:
 
 # Helper target for parallel execution
 test-single:
-	@$(eval TYPE := $(shell dirname $(TEST_PATH)))
-	@$(eval TEST := $(shell basename $(TEST_PATH)))
+	@$(eval TYPE := $(if $(TEST_PATH),$(patsubst %/,%,$(dir $(TEST_PATH))),.))
+	@$(eval TEST := $(if $(TEST_PATH),$(notdir $(TEST_PATH)),))
 	@$(MAKE) test-line TYPE=$(TYPE) TEST=$(TEST)
+
 
 # Parallel test execution using xargs
 test-parallel:

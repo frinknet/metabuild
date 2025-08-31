@@ -64,13 +64,14 @@ submodules:
 # Get all directories containing C files (excluding templates)
 SRCDIRS := $(shell \
 	if [ -d "$(SRCDIR)" ]; then \
-		find "$(SRCDIR)" -name '*.c' -not -path "$(TPLDIR)/*" -print0 2>/dev/null | \
-		xargs -0 -r dirname | sort -u | \
+		find "$(SRCDIR)" -name '*.c' -not -path "$(TPLDIR)/*" 2>/dev/null | \
+		sed 's|/[^/]*\.c$$||g' | sort -u | \
 		sed 's|^$(SRCDIR)/\{0,1\}||' | \
 		sed 's|^$$|.|'; \
 	else \
 		echo .; \
 	fi)
+
 
 # Function to check if directory contains main()
 define HAS_MAIN
