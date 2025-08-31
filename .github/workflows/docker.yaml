@@ -28,6 +28,11 @@ jobs:
             multi:
               - 'Dockerfile.multi'
               - 'Dockerfile.core'
+      - name: Debug outputs
+        run: |
+          echo "Core changed: ${{ steps.changes.outputs.core }}"
+          echo "Multi changed: ${{ steps.changes.outputs.multi }}"
+          echo "Event name: ${{ github.event_name }}"
 
   # Build core base image only if relevant files changed
   build-core:
