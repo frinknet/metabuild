@@ -1,44 +1,63 @@
 #!/bin/sh
+set -eu
+
 REPO="ghcr.io/frinknet/metabuild"
 IMAGE="${REPO##*/}"
 PREFIX="${HOME}/bin"
 VER="${1:-latest}"
 
-# Is prefix in path
 mkdir -p "$PREFIX"
+
 case ":$PATH:" in
-  "$PREFIX":*) ;;
   *:"$PREFIX":*) ;;
-  *:"$PREFIX") ;;
-  *) echo "export PATH=\"$PREFIX:\$PATH\"" >> "$HOME/.bashrc"; . "$HOME/.bashrc";;
+  *) printf '\nexport PATH="%s:$PATH"\n' "$PREFIX" >> "$HOME/.bashrc" || true ;;
 esac
 
-# Pull the container
-if ! docker pull "$REPO:$VER"; then
-  echo "could not pull docker container $REPO:$VER"
+# Record old local alias ID (if any)
+OLD_ID="$(docker image inspect -f '{{.Id}}' "$IMAGE:latest" 2>/dev/null || true)"
 
+# Pull new image
+if ! docker image pull "$REPO:$VER"; then
+  echo "could not pull docker image $REPO:$VER" >&2
   exit 1
 fi
 
-# Tag image
-docker tag "$REPO:$VER" "$IMAGE"
+# Retag to a stable local alias
+docker image tag "$REPO:$VER" "$IMAGE:latest"
+
+# Remove the previous image ID if it changed (skips if referenced)
+NEW_ID="$(docker image inspect -f '{{.Id}}' "$IMAGE:latest")"
+if [ -n "${OLD_ID:-}" ] && [ "$OLD_ID" != "$NEW_ID" ]; then
+  docker image rm "$OLD_ID" >/dev/null 2>&1 || true
+fi
+
+# Opportunistic cleanup of danglers
+docker image prune -f >/dev/null 2>&1 || true
 
 # Create a shell wrapper
-cat > "$PREFIX/$IMAGE" <<EOF
+WRAP="$PREFIX/$IMAGE"
+cat > "$WRAP" <<EOF
 #!/bin/sh
-if [ "\$1" = "update" ]; then
-  exec curl -L https://github.com/${REPO#*/}/raw/main/install.sh | sh -s -- $VER
+set -eu
+IMAGE="$IMAGE:latest"
+VERSION="$VER"
+if [ "\${1:-}" = "update" ]; then
+  TMP="\$(mktemp)"
+  trap 'rm -f "\$TMP"' EXIT
+  curl -fsSL "https://github.com/${REPO#*/}/raw/main/install.sh" -o "\$TMP"
+  exec sh "\$TMP" "\$VERSION"
 else
-  exec docker run --rm -it -u $(id -u):$(id -g) -v "\$(pwd):/build" $IMAGE "\$@"
+  exec docker run --rm -it \
+    -u "\$(id -u):\$(id -g)" \
+    -v "\$(pwd):/build" \
+    "\$IMAGE" "\$@"
 fi
 EOF
+chmod +x "$WRAP"
 
-# Make executable
-chmod +x "$PREFIX/$IMAGE"
-
-# Report what you did
 echo
-echo "✓ installed: $PREFIX/$IMAGE"
+echo "✓ installed: $WRAP"
 echo
 echo "Run 'metabuild init' to get started."
 echo
+
