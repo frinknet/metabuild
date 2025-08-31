@@ -52,7 +52,6 @@ else
   MKBUILD := $(MKUSER)
 endif
 
-
 # Makefile extensions
 MKLOCAL := $(filter-out $(MKUSER),$(wildcard $(CURDIR)/.metabuild/*.mk))
 MKCORE := $(filter-out $(addprefix /metabuild/,$(notdir $(MKLOCAL))),$(wildcard /metabuild/*.mk))
@@ -72,6 +71,9 @@ include $(MKBUILD)
 # Initialize submodules
 submodules:
 	@git submodule update --init --depth=1
+
+version:
+	@ git -C /metabuild describe --tags --abbrev=0
 
 # Get all directories containing C files (excluding templates)
 SRCDIRS := $(shell \

@@ -58,6 +58,8 @@ chmod +x "$WRAP"
 echo
 echo "✓ installed: $WRAP"
 echo
+"$WRAP" version 
+echo
 echo "Run 'metabuild init' to get started."
 echo
 
