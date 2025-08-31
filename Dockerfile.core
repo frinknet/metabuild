@@ -32,4 +32,3 @@ RUN echo 'export PS1="\n\[\e[1;91m\]\t\w \[\e[38;5;52m\]\$\[\e[0m\] "' >> /root/
     wasm-tools completion bash >> /root/.bashrc
 
 WORKDIR /build
-

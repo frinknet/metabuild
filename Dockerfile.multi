@@ -32,4 +32,3 @@ COPY --from=build /opt/osxcross/target/ /opt/osxcross/
 RUN echo 'export PATH="/opt/osxcross/bin:$PATH"' >> /root/.bashrc
 
 WORKDIR /build
-
