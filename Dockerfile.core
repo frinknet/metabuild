@@ -31,4 +31,5 @@ RUN echo "trap echo DEBUG"	 >> /root/.bashrc && \
 	echo 'export PS1="\n\[\e[1;91m\]  \w \[\e[38;5;52m\]\$\[\e[0m\] \[\e]12;#999900\007\]\[\e]12;#999900\007\]\[\e[3 q\]"' >> /root/.bashrc && \
 	wasm-tools completion bash >> /root/.bashrc
 
+
 WORKDIR /build
