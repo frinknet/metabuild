@@ -19,26 +19,57 @@ jobs:
         with:
           fetch-depth: 0
       
-      - name: Check file changes since previous tag
+      - name: Check file changes and container existence
         id: changes
         run: |
-          PREVIOUS_TAG=$(git tag --sort=-creatordate | head -2 | tail -1)
-          echo "Comparing $GITHUB_REF_NAME against $PREVIOUS_TAG"
+          IMAGE_NAME="ghcr.io/${{ github.repository }}"
           
-          if git diff --name-only $PREVIOUS_TAG $GITHUB_REF_NAME | grep -q "Dockerfile.core"; then
+          # Check if core container exists
+          if docker manifest inspect ${IMAGE_NAME}-core:latest >/dev/null 2>&1; then
+            echo "Core container exists, checking for changes..."
+            CORE_EXISTS=true
+          else
+            echo "Core container missing, will build"
+            CORE_EXISTS=false
+          fi
+          
+          # Check if multi container exists  
+          if docker manifest inspect ${IMAGE_NAME}-multi:latest >/dev/null 2>&1; then
+            echo "Multi container exists, checking for changes..."
+            MULTI_EXISTS=true
+          else
+            echo "Multi container missing, will build"
+            MULTI_EXISTS=false
+          fi
+          
+          # If containers don't exist, build them (fork scenario)
+          if [[ "$CORE_EXISTS" == "false" ]]; then
             echo "core=true" >> $GITHUB_OUTPUT
           else
-            echo "core=false" >> $GITHUB_OUTPUT
+            # Container exists, check for file changes
+            PREVIOUS_TAG=$(git tag --sort=-creatordate | head -2 | tail -1)
+            if [[ -n "$PREVIOUS_TAG" ]] && git diff --name-only $PREVIOUS_TAG $GITHUB_REF_NAME | grep -q "Dockerfile.core"; then
+              echo "core=true" >> $GITHUB_OUTPUT
+            else
+              echo "core=false" >> $GITHUB_OUTPUT
+            fi
           fi
           
-          if git diff --name-only $PREVIOUS_TAG $GITHUB_REF_NAME | grep -qE "(Dockerfile.multi|Dockerfile.core)"; then
+          if [[ "$MULTI_EXISTS" == "false" ]]; then
             echo "multi=true" >> $GITHUB_OUTPUT
           else
-            echo "multi=false" >> $GITHUB_OUTPUT
+            # Container exists, check for file changes
+            PREVIOUS_TAG=$(git tag --sort=-creatordate | head -2 | tail -1)
+            if [[ -n "$PREVIOUS_TAG" ]] && git diff --name-only $PREVIOUS_TAG $GITHUB_REF_NAME | grep -qE "(Dockerfile.multi|Dockerfile.core)"; then
+              echo "multi=true" >> $GITHUB_OUTPUT
+            else
+              echo "multi=false" >> $GITHUB_OUTPUT
+            fi
           fi
           
-          echo "Core changed: $(grep 'core=' $GITHUB_OUTPUT | cut -d= -f2)"
-          echo "Multi changed: $(grep 'multi=' $GITHUB_OUTPUT | cut -d= -f2)"
+          echo "Core build: $(grep 'core=' $GITHUB_OUTPUT | cut -d= -f2)"
+          echo "Multi build: $(grep 'multi=' $GITHUB_OUTPUT | cut -d= -f2)"
+
 
 
   # Build core base image only if relevant files changed
