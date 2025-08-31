@@ -33,6 +33,7 @@ case "${1:-}" in
     for file in build.sh build.bat; do
       cpmaybe "/metabuild/$file" .
     done
+    ;;
   extend)
     echo "Installing metabuild files..."
     for file in build.sh build.bat; do
