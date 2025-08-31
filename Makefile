@@ -32,11 +32,7 @@ CFLAGS	 += -I$(INCDIR) -I$(LIBDIR)
 CXXFLAGS += -I$(INCDIR) -I$(LIBDIR)
 
 # Smart detection: add each library subdirectory that contains headers
-ifneq ($(wildcard $(LIBDIR)),)
-	LIB_HEADER_DIRS := $(shell find $(LIBDIR) -mindepth 1 -type d -exec test -e "{}/*.h" \; -print 2>/dev/null)
-else
-	LIB_HEADER_DIRS :=
-endif
+LIB_HEADER_DIRS := $(shell find $(LIBDIR) -mindepth 1 -type d -exec test -e "{}/*.h" \; -print 2>/dev/null)
 
 CFLAGS += $(addprefix -I,$(LIB_HEADER_DIRS))
 CXXFLAGS += $(addprefix -I,$(LIB_HEADER_DIRS))
@@ -65,8 +61,16 @@ include $(MKFS)
 submodules:
 	@git submodule update --init --depth=1
 
-# Discover all directories containing C files (including root and nested)
-SRCDIRS := $(shell find $(SRCDIR) -path "$(TPLDIR)" -prune -o -type f -name '*.c' -print | xargs -r dirname | sort -u | sed 's|^$(SRCDIR)||' | sed 's|^/||' | sed 's|^$$|.|')
+# Get all directories containing C files (excluding templates)
+SRCDIRS := $(shell \
+	if [ -d "$(SRCDIR)" ]; then \
+		find "$(SRCDIR)" -name '*.c' -not -path "$(TPLDIR)/*" -print0 2>/dev/null | \
+		xargs -0 -r dirname | sort -u | \
+		sed 's|^$(SRCDIR)/\{0,1\}||' | \
+		sed 's|^$$|.|'; \
+	else \
+		echo .; \
+	fi)
 
 # Function to check if directory contains main()
 define HAS_MAIN
