@@ -1,5 +1,5 @@
 # multi.Dockerfile - Adds cross-compilation for Windows and macOS
-FROM ghcr.io/frinknet/metabuild-core:latest AS build
+FROM ghcr.io/frinknet/metabuild:latest AS build
 
 # Install dependencies for OSXCross
 RUN apk add --no-cache \
@@ -20,7 +20,7 @@ RUN LATEST_SDK=$(curl -s https://api.github.com/repos/joseluisq/macosx-sdks/rele
     UNATTENDED=1 /opt/osxcross/build.sh
 
 # Final multi image
-FROM ghcr.io/frinknet/metabuild-core:latest
+FROM ghcr.io/frinknet/metabuild:latest
 
 # Install MinGW for Windows cross-compilation
 RUN apk add --no-cache mingw-w64-gcc
