@@ -32,13 +32,13 @@ CFLAGS	 += -I$(INCDIR) -I$(LIBDIR)
 CXXFLAGS += -I$(INCDIR) -I$(LIBDIR)
 
 # Smart detection: add each library subdirectory that contains headers
-LIB_HEADER_DIRS = $(shell [ -d "$(LIBDIR)" ] && shell find $(LIBDIR) -mindepth 1 -type d -exec test -e "{}/*.h" \; -print 2>/dev/null)
+LIB_HEADER_DIRS = $(shell [ -d "$(LIBDIR)" ] && find "$(LIBDIR)" -mindepth 1 -type d -exec test -e "{}/*.h" \; -print 2>/dev/null)
 
 CFLAGS += $(addprefix -I,$(LIB_HEADER_DIRS))
 CXXFLAGS += $(addprefix -I,$(LIB_HEADER_DIRS))
 
 # Find all source files (recursively in src/)
-SRCS := $(shell [ -d "$(SRCDIR)" ] && find $(SRCDIR) -name '*.c' -o -name '*.cpp' -o -name '*.cc')
+SRCS := $(shell [ -d "$(SRCDIR)" ] && find "$(SRCDIR)" -name '*.c' -o -name '*.cpp' -o -name '*.cc' 2>/dev/null)
 OBJS := $(SRCS:$(SRCDIR)/%=$(OBJDIR)/%.o)
 DEPS := $(OBJS:.o=.d)
 
@@ -86,20 +86,21 @@ SRCDIRS := $(shell \
 		echo .; \
 	fi)
 
-
 # Function to check if directory contains main()
 define HAS_MAIN
-$(shell find $(if $(filter .,$(1)),$(SRCDIR),$(SRCDIR)/$(1)) -maxdepth 1 -name '*.c' -exec grep -l "int main\|void main" {} \; 2>/dev/null | wc -l)
+$(shell D="$(if $(filter .,$(1)),$(SRCDIR),$(SRCDIR)/$(1))"; \
+	   [ -d "$$D" ] && find "$$D" -maxdepth 1 -name '*.c' -exec grep -l "int main\|void main" {} \; 2>/dev/null | wc -l || echo 0)
+endef
+
+# Generate object lists for each directory (preserving structure)
+define SUBDIR_OBJS
+$(shell D="$(if $(filter .,$(1)),$(SRCDIR),$(SRCDIR)/$(1))"; \
+	   [ -d "$$D" ] && find "$$D" -maxdepth 1 -name '*.c' | sed 's|$(SRCDIR)/||; s|^|$(OBJDIR)/|' | sed 's|\.c$$|.c.o|')
 endef
 
 # Separate executables from libraries based on main() presence
 BINDIRS := $(foreach dir,$(SRCDIRS),$(if $(filter-out 0,$(call HAS_MAIN,$(dir))),$(dir)))
 LIBDIRS := $(filter-out $(BINDIRS),$(SRCDIRS))
-
-# Generate object lists for each directory (preserving structure)
-define SUBDIR_OBJS
-$(shell find $(if $(filter .,$(1)),$(SRCDIR),$(SRCDIR)/$(1)) -maxdepth 1 -name '*.c' | sed 's|$(SRCDIR)/||; s|^|$(OBJDIR)/|' | sed 's|\.c$$|.c.o|')
-endef
 
 # Function to generate clean target names
 define CLEAN_NAME
