@@ -5,6 +5,10 @@ FROM ${BASE_IMAGE}
 # Copy METABUILD source
 COPY . /metabuild
 
+# Add version
+ARG VERSION
+RUN test -n "$VERSION" && printf '%s\n' "$VERSION" > /metabuild/VERSION
+
 # Create bootstrap entrypoint script
 RUN mv /metabuild/entrypoint.sh /bin/metabuild
 

@@ -73,7 +73,7 @@ submodules:
 	@git submodule update --init --depth=1
 
 version:
-	@ git -C /metabuild describe --tags --abbrev=0
+	@echo /metabuild/VERSION
 
 # Get all directories containing C files (excluding templates)
 SRCDIRS := $(shell \
