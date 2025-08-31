@@ -28,6 +28,11 @@ case "${1:-}" in
     echo -e "\n\n\e[1;33m  You are now DEEP in the build system... BEWARE OF THE GRUE!!!\e[0m"
     exec bash "$@"
     ;;
+  init)
+    echo "Installing build runner..."
+    for file in build.sh build.bat; do
+      cpmaybe "/metabuild/$file" .
+    done
   extend)
     echo "Installing metabuild files..."
     for file in build.sh build.bat; do
