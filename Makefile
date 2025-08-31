@@ -42,20 +42,32 @@ SRCS := $(shell find $(SRCDIR) -name '*.c' -o -name '*.cpp' -o -name '*.cc')
 OBJS := $(SRCS:$(SRCDIR)/%=$(OBJDIR)/%.o)
 DEPS := $(OBJS:.o=.d)
 
+# Check for USER metabuild.mk  
+MKUSER := $(wildcard $(CURDIR)/.metabuild/metabuild.mk)
+MKROOT := $(wildcard /metabuild/metabuild.mk)
+
+ifeq ($(MKUSER),)
+  MKBUILD := $(MKROOT)
+else
+  MKBUILD := $(MKUSER)
+endif
+
+
 # Makefile extensions
-MKEX := $(CURDIR)/.metabuild/metabuild.mk
-MKFS := $(filter-out $(MKEX),$(wildcard $(CURDIR)/.metabuild/*.mk))
+MKLOCAL := $(filter-out $(MKUSER),$(wildcard $(CURDIR)/.metabuild/*.mk))
+MKCORE := $(filter-out $(addprefix /metabuild/,$(notdir $(MKLOCAL))),$(wildcard /metabuild/*.mk))
 
 # Library sources (separate from main sources)
 LIBSRCS  := $(shell [ -d "$(LIBDIR)" ] && shell find $(LIBDIR) -name '*.c' -o -name '*.cpp' -o -name '*.cc')
 LIBOBJS  := $(LIBSRCS:$(LIBDIR)/%=$(OBJDIR)/lib/%.o)
 
-include $(MKEX)
+include $(MKBUILD)
 
 # Default target
 .DEFAULT_GOAL := all
 
-include $(MKFS)
+-include $(MKCORE)
+-include $(MKLOCAL)
 
 # Initialize submodules
 submodules:
