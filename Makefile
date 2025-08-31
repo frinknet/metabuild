@@ -1,5 +1,4 @@
 # METABUILD - (c) 2025 FRINKnet & Friends - 0BSDA/all
-VPATH = $(CURDIR):$(CURDIR)/.metabuild:.
 
 # Project configuration
 PRJ ?= $(shell basename $(CURDIR))
@@ -50,7 +49,7 @@ MKFS := $(filter-out $(MKEX),$(wildcard $(CURDIR)/.metabuild/*.mk))
 LIBSRCS  := $(shell find $(LIBDIR) -name '*.c' -o -name '*.cpp' -o -name '*.cc')
 LIBOBJS  := $(LIBSRCS:$(LIBDIR)/%=$(OBJDIR)/lib/%.o)
 
-include metabuild.mk
+include $(MKEX)
 
 # Default target
 .DEFAULT_GOAL := all
