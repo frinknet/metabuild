@@ -32,7 +32,12 @@ CFLAGS	 += -I$(INCDIR) -I$(LIBDIR)
 CXXFLAGS += -I$(INCDIR) -I$(LIBDIR)
 
 # Smart detection: add each library subdirectory that contains headers
-LIB_HEADER_DIRS := $(shell find $(LIBDIR) -mindepth 1 -type d -exec test -e "{}/*.h" \; -print 2>/dev/null)
+ifneq ($(wildcard $(LIBDIR)),)
+	LIB_HEADER_DIRS := $(shell find $(LIBDIR) -mindepth 1 -type d -exec test -e "{}/*.h" \; -print 2>/dev/null)
+else
+	LIB_HEADER_DIRS :=
+endif
+
 CFLAGS += $(addprefix -I,$(LIB_HEADER_DIRS))
 CXXFLAGS += $(addprefix -I,$(LIB_HEADER_DIRS))
 
