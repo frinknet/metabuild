@@ -32,11 +32,7 @@ CFLAGS	 += -I$(INCDIR) -I$(LIBDIR)
 CXXFLAGS += -I$(INCDIR) -I$(LIBDIR)
 
 # Smart detection: add each library subdirectory that contains headers
-ifeq ($(wildcard $(LIBDIR)),)
-	LIB_HEADER_DIRS :=
-else
-	LIB_HEADER_DIRS := $(shell find $(LIBDIR) -mindepth 1 -type d -exec test -e "{}/*.h" \; -print 2>/dev/null)
-endif
+LIB_HEADER_DIRS = $(shell [ -d "$(LIBDIR)" ] && shell find $(LIBDIR) -mindepth 1 -type d -exec test -e "{}/*.h" \; -print 2>/dev/null)
 
 CFLAGS += $(addprefix -I,$(LIB_HEADER_DIRS))
 CXXFLAGS += $(addprefix -I,$(LIB_HEADER_DIRS))
@@ -51,7 +47,7 @@ MKEX := $(CURDIR)/.metabuild/metabuild.mk
 MKFS := $(filter-out $(MKEX),$(wildcard $(CURDIR)/.metabuild/*.mk))
 
 # Library sources (separate from main sources)
-LIBSRCS  := $(shell find $(LIBDIR) -name '*.c' -o -name '*.cpp' -o -name '*.cc')
+LIBSRCS  := $(shell [ -d "$(LIBDIR)" ] && shell find $(LIBDIR) -name '*.c' -o -name '*.cpp' -o -name '*.cc')
 LIBOBJS  := $(LIBSRCS:$(LIBDIR)/%=$(OBJDIR)/lib/%.o)
 
 include $(MKEX)
