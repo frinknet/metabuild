@@ -1,0 +1,35 @@
+# multi.Dockerfile - Adds cross-compilation for Windows and macOS
+FROM ghcr.io/frinknet/metabuild-core:latest AS build
+
+# Install dependencies for OSXCross
+RUN apk add --no-cache \
+    libxml2-dev \
+    openssl-dev \
+    musl-fts-dev \
+    bsd-compat-headers \
+    mingw-w64-gcc
+
+# Download latest macOS SDK and build OSXCross
+RUN LATEST_SDK=$(curl -s https://api.github.com/repos/joseluisq/macosx-sdks/releases/latest | \
+    grep -o '"tag_name": "[^"]*' | grep -o '[^"]*$') && \
+    echo "Auto-downloading macOS SDK: $LATEST_SDK" && \
+    curl -fsSL "https://github.com/joseluisq/macosx-sdks/releases/download/$LATEST_SDK/MacOSX$LATEST_SDK.sdk.tar.xz" \
+    -o /tmp/MacOSX$LATEST_SDK.sdk.tar.xz && \
+    git clone --depth 1 https://github.com/tpoechtrager/osxcross.git /opt/osxcross && \
+    mv /tmp/MacOSX$LATEST_SDK.sdk.tar.xz /opt/osxcross/tarballs/ && \
+    UNATTENDED=1 /opt/osxcross/build.sh
+
+# Final multi image
+FROM ghcr.io/frinknet/metabuild-core:latest
+
+# Install MinGW for Windows cross-compilation
+RUN apk add --no-cache mingw-w64-gcc
+
+# Copy OSXCross tools from build stage
+COPY --from=build /opt/osxcross/target/ /opt/osxcross/
+
+# Update PATH for cross-compilation tools
+RUN echo 'export PATH="/opt/osxcross/bin:$PATH"' >> /root/.bashrc
+
+WORKDIR /build
+

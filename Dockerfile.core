@@ -1,0 +1,35 @@
+# core.Dockerfile - Essential compilers + WebAssembly + XCC
+FROM alpine:latest
+
+# Install essential compilation tools
+RUN apk add --no-cache \
+    bash \
+    build-base \
+    clang \
+    tcc \
+    wasm-tools \
+    make \
+    git \
+    curl \
+    cmake \
+    python3 \
+    bash-completion
+
+# Build and install XCC (small, self-contained C compiler)
+RUN git clone --depth 1 https://github.com/tyfkda/xcc.git /opt/xcc \
+ && make -C /opt/xcc CC=clang \
+ && mkdir -p /usr/local/xcc/bin/ \
+ && cp /opt/xcc/xcc /usr/local/xcc/bin/ \
+ && cp /opt/xcc/cc1 /usr/local/xcc/bin/ \
+ && cp /opt/xcc/cpp /usr/local/xcc/bin/ \
+ && cp /opt/xcc/as /usr/local/xcc/bin/ \
+ && cp /opt/xcc/ld /usr/local/xcc/bin/ \
+ && rm -rf /opt/xcc
+
+# Set up shell environment
+RUN echo 'export PS1="\n\[\e[1;91m\]\t\w \[\e[38;5;52m\]\$\[\e[0m\] "' >> /root/.bashrc && \
+    echo 'export PATH="/usr/local/xcc/bin:/usr/local/bin:$PATH"' >> /root/.bashrc && \
+    wasm-tools completion bash >> /root/.bashrc
+
+WORKDIR /build
+

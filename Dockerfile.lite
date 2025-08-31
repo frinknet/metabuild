@@ -1,0 +1,66 @@
+# metabuild.Dockerfile - Adds METABUILD source (can use core OR multi as base)
+ARG BASE_IMAGE=ghcr.io/frinknet/metabuild-core:latest
+FROM ${BASE_IMAGE}
+
+# Copy METABUILD source
+COPY . /metabuild
+
+# Create bootstrap entrypoint script
+RUN cat > /bin/metabuild <<'EOF' && chmod +x /bin/metabuild
+#!/bin/bash
+set -e
+cd /build
+
+cpmaybe() {
+    local src="$1"
+    local dir="$2"
+    local file="${src##*/}"
+    local dest="$dir/$file"
+    if [[ -f "$dest" ]]; then
+        read -p "$dest exists. Overwrite? (y/N): " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            cp "$src" "$dir"
+            echo "✓ $dest"
+        else
+            echo "✗ $dest"
+        fi
+    else
+        cp "$src" "$dir"
+        echo "✓ $dest"
+    fi
+}
+
+case "${1:-}" in
+    cli)
+        shift
+        exec bash "$@"
+        ;;
+    init)
+        echo "Installing metabuild files..."
+        for file in build.sh build.bat; do
+            cpmaybe "/metabuild/$file" .
+        done
+        mkdir -p .metabuild
+        for file in /metabuild/*.mk; do
+            cpmaybe "$file" .metabuild
+        done
+        echo "Run 'metabuild' to build your project."
+        ;;
+    extend)
+        cpmaybe /metabuild/Makefile .
+        ;;
+    *)
+        mkdir -p .metabuild
+        cp -n /metabuild/*.mk .metabuild/
+        if [[ -f Makefile ]]; then
+            exec make "$@"
+        else
+            exec make -f /metabuild/Makefile "$@"
+        fi
+        ;;
+esac
+EOF
+
+ENTRYPOINT ["/bin/metabuild"]
+
