@@ -161,6 +161,8 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.IMAGE_NAME }}
+          flavor: |
+            latest=false
           tags: |
             type=ref,event=tag,suffix=-lite
             type=raw,value=lite
@@ -189,6 +191,9 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+        - name: Echo tags
+          run: printf '%s\n' "${{ steps.meta.outputs.tags }}"
+
   # Always build full image (includes metabuild source changes)
   build-full:
     needs: [build-lite,build-multi]
@@ -208,6 +213,8 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.IMAGE_NAME }}
+          flavor: |
+            latest=true
           tags: |
             type=ref,event=tag
             type=raw,value=latest
@@ -235,3 +242,6 @@ jobs:
           platforms: linux/amd64
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+        - name: Echo tags
+          run: printf '%s\n' "${{ steps.meta.outputs.tags }}"
