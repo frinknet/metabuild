@@ -6,8 +6,7 @@ RUN apk add --no-cache \
     libxml2-dev \
     openssl-dev \
     musl-fts-dev \
-    bsd-compat-headers \
-    mingw-w64-gcc
+    bsd-compat-headers
 
 # Download latest macOS SDK and build OSXCross
 RUN LATEST_SDK=$(curl -s https://api.github.com/repos/joseluisq/macosx-sdks/releases/latest | \
