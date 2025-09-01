@@ -191,7 +191,7 @@ jobs:
 
   # Always build full image (includes metabuild source changes)
   build-full:
-    needs: [build-multi]
+    needs: [build-lite,build-multi]
     if: always() && !failure()
     runs-on: ubuntu-latest
     permissions:
