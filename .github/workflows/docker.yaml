@@ -191,8 +191,8 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-        - name: Echo tags
-          run: printf '%s\n' "${{ steps.meta.outputs.tags }}"
+      - name: Echo tags
+        run: printf '%s\n' "${{ steps.meta.outputs.tags }}"
 
   # Always build full image (includes metabuild source changes)
   build-full:
