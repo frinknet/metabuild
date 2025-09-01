@@ -31,5 +31,4 @@ RUN echo 'export PS1="\n\[\e[1;91m\]	\w \[\e[38;5;52m\]\$\[\e[0m\] "' >> /etc/ba
 	echo 'export PATH="/opt/osxcross/bin:/usr/local/xcc/bin:/usr/local/bin:$PATH"' >> /etc/bash/bashrc && \
 	wasm-tools completion bash >> /etc/bash/bashrc
 
-
 WORKDIR /build
