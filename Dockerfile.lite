@@ -1,6 +1,5 @@
 # metabuild.Dockerfile - Adds METABUILD source (can use core OR multi as base)
-ARG BASE_IMAGE=ghcr.io/frinknet/metabuild:latest
-FROM ${BASE_IMAGE}
+FROM alpine:latest
 
 # Copy METABUILD source
 COPY . /metabuild
