@@ -37,6 +37,10 @@ LIB_HEADER_DIRS = $(shell [ -d "$(LIBDIR)" ] && find "$(LIBDIR)" -mindepth 1 -ty
 CFLAGS += $(addprefix -I,$(LIB_HEADER_DIRS))
 CXXFLAGS += $(addprefix -I,$(LIB_HEADER_DIRS))
 
+CFLAGS	 += -fPIC -fPIE -MMD -MP
+CXXFLAGS += -fPIC -fPIE -MMD -MP
+LDFLAGS  += -pie
+
 # Find all source files (recursively in src/)
 SRCS := $(shell [ -d "$(SRCDIR)" ] && find "$(SRCDIR)" -name '*.c' -o -name '*.cpp' -o -name '*.cc' 2>/dev/null)
 OBJS := $(SRCS:$(SRCDIR)/%=$(OBJDIR)/%.o)
@@ -157,21 +161,21 @@ $(foreach dir,$(filter-out .,$(SRCDIRS)),$(eval $$(OBJDIR)/$(dir): ; @mkdir -p $
 $(OBJDIR) $(LNKDIR) $(BINDIR):
 	@mkdir -p $@
 
-# Compile source files to objects (with PIC for shared lib support)
+# Compile source files to objects
 $(OBJDIR)/%.c.o: $(SRCDIR)/%.c | $(OBJDIR)
 	@mkdir -p $(dir $@)
 	@echo GEN $@
-	@$(CC) $(CFLAGS) -fPIC -MMD -MP -c $< -o $@
+	@$(CC) $(CFLAGS) -c $< -o $@
 
 $(OBJDIR)/%.cpp.o: $(SRCDIR)/%.cpp | $(OBJDIR)
 	@mkdir -p $(dir $@)
 	@echo GEN $@
-	@$(CXX) $(CXXFLAGS) -fPIC -MMD -MP -c $< -o $@
+	@$(CXX) $(CXXFLAGS) -c $< -o $@
 
 $(OBJDIR)/%.cc.o: $(SRCDIR)/%.cc | $(OBJDIR)
 	@mkdir -p $(dir $@)
 	@echo GEN $@
-	@$(CXX) $(CXXFLAGS) -fPIC -MMD -MP -c $< -o $@
+	@$(CXX) $(CXXFLAGS) -c $< -o $@
 
 # Compile library files
 $(OBJDIR)/lib/%.c.o: $(LIBDIR)/%.c | $(OBJDIR)
