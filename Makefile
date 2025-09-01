@@ -40,6 +40,7 @@ CXXFLAGS += $(addprefix -I,$(LIB_HEADER_DIRS))
 CFLAGS	 += -fPIC -fPIE -MMD -MP
 CXXFLAGS += -fPIC -fPIE -MMD -MP
 LDFLAGS  += -pie
+LDLIBS	 ?=
 
 # Find all source files (recursively in src/)
 SRCS := $(shell [ -d "$(SRCDIR)" ] && find "$(SRCDIR)" -name '*.c' -o -name '*.cpp' -o -name '*.cc' 2>/dev/null)
@@ -131,7 +132,7 @@ endef
 define MAKE_BIN
 $(if $(filter .,$(1)),$(BINDIR)/$(PRJ)$(EXESUFFIX),$(BINDIR)/$(call CLEAN_NAME,$(1))$(EXESUFFIX)): $(call SUBDIR_OBJS,$(1)) $(call FIND_RELATED_LIBS,$(1)) | $(BINDIR)
 	@echo GEN $$@
-	$$(CC) $(call SUBDIR_OBJS,$(1)) $(call FIND_RELATED_LIBS,$(1)) -o $$@ $$(LDFLAGS)
+	$$(CC) $$(LDFLAGS) $(call SUBDIR_OBJS,$(1)) $(call FIND_RELATED_LIBS,$(1)) -o $$@ $$(LDLIBS)
 endef
 
 # pattern-generate static library rules (default)
