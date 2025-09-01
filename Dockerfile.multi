@@ -13,7 +13,7 @@ RUN LATEST_SDK=$(curl -s https://api.github.com/repos/joseluisq/macosx-sdks/rele
     grep -o '"tag_name": "[^"]*' | grep -o '[^"]*$') && \
     echo "Auto-downloading macOS SDK: $LATEST_SDK" && \
     curl -fsSL "https://github.com/joseluisq/macosx-sdks/releases/download/$LATEST_SDK/MacOSX$LATEST_SDK.sdk.tar.xz" \
-    -o /tmp/MacOSX$LATEST_SDK.sdk.tar.xz && \
+	-o /tmp/MacOSX$LATEST_SDK.sdk.tar.xz && \
     git clone --depth 1 https://github.com/tpoechtrager/osxcross.git /opt/osxcross && \
     mv /tmp/MacOSX$LATEST_SDK.sdk.tar.xz /opt/osxcross/tarballs/ && \
     UNATTENDED=1 /opt/osxcross/build.sh
