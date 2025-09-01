@@ -12,9 +12,4 @@ RUN test -n "$VERSION" && printf 'METABUILD %s\n' "$VERSION" > /metabuild/VERSIO
 # Create bootstrap entrypoint script
 RUN mv /metabuild/entrypoint.sh /bin/metabuild
 
-# Set up bash environment
-RUN echo 'export PS1="\n\[\e[1;91m\]	\w \[\e[38;5;52m\]\$\[\e[0m\] "' >> /root/.bashrc && \
-	echo 'export PATH="/opt/osxcross/bin:/usr/local/xcc/bin:/usr/local/bin:$PATH"' >> /root/.bashrc && \
-	wasm-tools completion bash >> /root/.bashrc
-
 ENTRYPOINT ["/bin/metabuild"]

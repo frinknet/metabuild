@@ -62,4 +62,3 @@ echo
 echo
 echo "Run 'metabuild init' to get started."
 echo
-
