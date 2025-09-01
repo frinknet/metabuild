@@ -9,14 +9,16 @@ RUN apk add --no-cache \
     bsd-compat-headers
 
 # Download latest macOS SDK and build OSXCross
-RUN LATEST_SDK=$(curl -s https://api.github.com/repos/joseluisq/macosx-sdks/releases/latest | \
-    grep -o '"tag_name": "[^"]*' | grep -o '[^"]*$') && \
-    echo "Auto-downloading macOS SDK: $LATEST_SDK" && \
-    curl -fsSL "https://github.com/joseluisq/macosx-sdks/releases/download/$LATEST_SDK/MacOSX$LATEST_SDK.sdk.tar.xz" \
-	-o /tmp/MacOSX$LATEST_SDK.sdk.tar.xz && \
-    git clone --depth 1 https://github.com/tpoechtrager/osxcross.git /opt/osxcross && \
-    mv /tmp/MacOSX$LATEST_SDK.sdk.tar.xz /opt/osxcross/tarballs/ && \
-    UNATTENDED=1 /opt/osxcross/build.sh
+RUN set -eux; \
+  LATEST_SDK="$(curl -fsSL "https://api.github.com/repos/joseluisq/macosx-sdks/releases/latest" \
+    | grep -m1 -o '"tag_name": "[^"]*' | grep -o '[^"]*$')"; \
+  echo "Auto-downloading macOS SDK: ${LATEST_SDK}"; \
+  curl -fsSL "https://github.com/joseluisq/macosx-sdks/releases/download/${LATEST_SDK}/MacOSX${LATEST_SDK}.sdk.tar.xz" \
+    -o "/tmp/MacOSX${LATEST_SDK}.sdk.tar.xz"; \
+  rm -rf /opt/osxcross; \
+  git clone --depth 1 "https://github.com/tpoechtrager/osxcross.git" /opt/osxcross; \
+  mv "/tmp/MacOSX${LATEST_SDK}.sdk.tar.xz" /opt/osxcross/tarballs/; \
+  UNATTENDED=1 /opt/osxcross/build.sh
 
 # Final multi image
 FROM ghcr.io/frinknet/metabuild:latest
