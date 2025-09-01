@@ -1,5 +1,5 @@
 # metabuild.Dockerfile - Adds METABUILD source (can use core OR multi as base)
-FROM ghcr.io/frinknet/metabuild-core:latest
+FROM ghcr.io/frinknet/metabuild:latest
 
 # Copy METABUILD source
 COPY . /metabuild
