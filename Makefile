@@ -214,10 +214,13 @@ else
 	$(CC) -shared $^ -o $@ $(LDFLAGS)
 endif
 
+rebuild: clean all
+reshared: clean shared
+
 clean:
 	@rm -rf $(OUTDIR)
 
 # Include dependency files
 -include $(DEPS)
 
-.PHONY: all clean shared submodules
+.PHONY: all clean shared submodules rebuild reshared
