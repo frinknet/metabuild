@@ -42,10 +42,7 @@ set -eu
 IMAGE="$IMAGE:latest"
 VERSION="$VER"
 if [ "\${1:-}" = "update" ]; then
-  TMP="\$(mktemp)"
-  trap 'rm -f "\$TMP"' EXIT
-  curl -fsSL "https://github.com/${REPO#*/}/raw/main/install.sh" -o "\$TMP"
-  exec sh "\$TMP" "\$VERSION"
+  curl -fsSL "https://github.com/${REPO#*/}/raw/main/install.sh" | exec sh -s -- "\$VERSION"
 else
   exec docker run --rm -it \
     -u "\$(id -u):\$(id -g)" \

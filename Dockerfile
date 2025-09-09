@@ -62,9 +62,9 @@ COPY --from=build /opt/osxcross/target/		/opt/osxcross/
 COPY . /metabuild
 
 # Set up bash environment
-RUN echo 'export PS1="\n\[\e[1;91m\]	\w \[\e[38;5;52m\]\$\[\e[0m\] "' >> /root/.bashrc && \
-	echo 'export PATH="/opt/osxcross/bin:/usr/local/xcc/bin:/usr/local/bin:$PATH"' >> /root/.bashrc && \
-	wasm-tools completion bash >> /root/.bashrc
+RUN echo 'export PS1="\n\[\e[1;91m\]	\w \[\e[38;5;52m\]\$\[\e[0m\] "' >> /etc/bash/bashrc && \
+	echo 'export PATH="/opt/osxcross/bin:/usr/local/xcc/bin:/usr/local/bin:$PATH"' >> /etc/bash/bashrc && \
+	wasm-tools completion bash >> /etc/bash/bashrc
 
 # Create bootstrap entrypoint script
 RUN cat > /bin/metabuild <<'EOF' && chmod +x /bin/metabuild
@@ -129,5 +129,6 @@ case "${1:-}" in
 esac
 EOF
 
+ENV BASH_ENV="/etc/bash/bashrc"
 WORKDIR /build
 ENTRYPOINT ["/bin/metabuild"]
