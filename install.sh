@@ -43,6 +43,11 @@ IMAGE="$IMAGE:latest"
 VERSION="$VER"
 if [ "\${1:-}" = "update" ]; then
   curl -fsSL "https://github.com/${REPO#*/}/raw/main/install.sh" | exec sh -s -- "\$VERSION"
+elif [ -t 1 ]; then
+  exec docker run --rm -i \
+    -u "\$(id -u):\$(id -g)" \
+    -v "\$(pwd):/build" \
+    "\$IMAGE" "\$@"
 else
   exec docker run --rm -it \
     -u "\$(id -u):\$(id -g)" \
