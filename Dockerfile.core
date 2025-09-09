@@ -1,4 +1,4 @@
-# core.Dockerfile - Essential compilers + WebAssembly + XCC
+# Dockerfile.core - Essential compilers + WebAssembly + XCC
 FROM alpine:latest
 
 # Install essential compilation tools
