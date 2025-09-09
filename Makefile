@@ -1,5 +1,17 @@
 # METABUILD - (c) 2025 FRINKnet & Friends - 0BSDA/all
 
+# Check for USER metabuild.mk  
+MKUSER := $(wildcard $(CURDIR)/.metabuild/metabuild.mk)
+MKROOT := $(wildcard /metabuild/metabuild.mk)
+
+ifeq ($(MKUSER),)
+  MKBUILD := $(MKROOT)
+else
+  MKBUILD := $(MKUSER)
+endif
+
+include $(MKBUILD)
+
 # Project configuration
 PRJ ?= $(shell basename $(CURDIR))
 VER := $(shell git describe --tags --abbrev=0 2>/dev/null || git rev-parse --abbrev-ref HEAD 2>/dev/null || echo dev)
@@ -47,16 +59,6 @@ SRCS := $(shell [ -d "$(SRCDIR)" ] && find "$(SRCDIR)" -name '*.c' -o -name '*.c
 OBJS := $(SRCS:$(SRCDIR)/%=$(OBJDIR)/%.o)
 DEPS := $(OBJS:.o=.d)
 
-# Check for USER metabuild.mk  
-MKUSER := $(wildcard $(CURDIR)/.metabuild/metabuild.mk)
-MKROOT := $(wildcard /metabuild/metabuild.mk)
-
-ifeq ($(MKUSER),)
-  MKBUILD := $(MKROOT)
-else
-  MKBUILD := $(MKUSER)
-endif
-
 # Makefile extensions
 MKLOCAL := $(filter-out $(MKUSER),$(wildcard $(CURDIR)/.metabuild/*.mk))
 MKCORE := $(filter-out $(MKROOT) $(addprefix /metabuild/,$(notdir $(MKLOCAL))),$(wildcard /metabuild/*.mk))
@@ -64,8 +66,6 @@ MKCORE := $(filter-out $(MKROOT) $(addprefix /metabuild/,$(notdir $(MKLOCAL))),$
 # Library sources (separate from main sources)
 LIBSRCS  := $(shell [ -d "$(LIBDIR)" ] && find $(LIBDIR) -name '*.c' -o -name '*.cpp' -o -name '*.cc')
 LIBOBJS  := $(LIBSRCS:$(LIBDIR)/%=$(OBJDIR)/lib/%.o)
-
-include $(MKBUILD)
 
 # Default target
 .DEFAULT_GOAL := all
