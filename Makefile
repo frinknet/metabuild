@@ -94,7 +94,7 @@ SRCDIRS := $(shell \
 # Function to check if directory contains main()
 define HAS_MAIN
 $(shell D="$(if $(filter .,$(1)),$(SRCDIR),$(SRCDIR)/$(1))"; \
-	   [ -d "$$D" ] && find "$$D" -maxdepth 1 -name '*.c' -exec grep -l "int main\|void main" {} \; 2>/dev/null | wc -l || echo 0)
+	   [ -d "$$D" ] && find "$$D" -maxdepth 1 -name '*.c' -exec grep -l "int main([^)]*)[[:space:]]*{" {} \; 2>/dev/null | wc -l || echo 0)
 endef
 
 # Generate object lists for each directory (preserving structure)

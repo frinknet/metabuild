@@ -32,4 +32,5 @@ COPY --from=build /opt/osxcross/target/ /opt/osxcross/
 # Update PATH for cross-compilation tools
 RUN echo 'export PATH="/opt/osxcross/bin:$PATH"' >> /root/.bashrc
 
+ENV COMPS="clang gcc tcc xcc osx win"
 WORKDIR /build

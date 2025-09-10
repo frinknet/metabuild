@@ -11,5 +11,5 @@ RUN test -n "$VERSION" && printf 'METABUILD %s\n' "$VERSION" > /metabuild/VERSIO
 # Create bootstrap entrypoint script
 RUN mv /metabuild/entrypoint.sh /bin/metabuild
 
-
+ENV COMPS="clang gcc tcc xcc"
 ENTRYPOINT ["/bin/metabuild"]
