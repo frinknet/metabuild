@@ -8,6 +8,7 @@ RUN apk add --no-cache \
     clang \
     tcc \
     wasm-tools \
+    wasi-sdk \
     make \
     git \
     curl \
