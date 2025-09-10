@@ -1,6 +1,5 @@
 #!/bin/bash
 set -e
-cd /build
 
 cpmaybe() {
   local src="$1"
@@ -12,7 +11,7 @@ cpmaybe() {
     read -p "$dest exists. Overwrite? (y/N): " -n 1 -r
     echo
 
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
+    if [[ "$REPLY" =~ "^[Yy]$" ]]; then
       cp "$src" "$dir"
 
       echo "✓ $dest"

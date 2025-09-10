@@ -87,6 +87,7 @@ SRCDIRS := $(shell \
 		sed 's|/[^/]*\.c$$||g' | sort -u | \
 		sed 's|^$(SRCDIR)/\{0,1\}||' | \
 		sed 's|^$$|.|'; \
+		echo \
 	else \
 		echo .; \
 	fi)
