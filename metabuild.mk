@@ -12,7 +12,7 @@ ifeq ($(METABUILD),)
 .DEFAULT_GOAL := $(MAKECMDGOALS)
 $(.DEFAULT_GOAL):
 	@docker image inspect $(IMAGE) >/dev/null 2>&1 || \
-	  (docker pull $(REPO):latest || docker build -t $(IMAGE) .)
+	  (docker pull "$(REPO):latest" || docker build -t "$(IMAGE)" .)
 	@echo "⇢ jumping into $(IMAGE)…"
 	@exec docker run --rm -it \
 		-v "$(CURDIR):/work" \

@@ -64,7 +64,7 @@ MKLOCAL := $(filter-out $(MKUSER),$(wildcard $(CURDIR)/.metabuild/*.mk))
 MKCORE := $(filter-out $(MKROOT) $(addprefix /metabuild/,$(notdir $(MKLOCAL))),$(wildcard /metabuild/*.mk))
 
 # Library sources (separate from main sources)
-LIBSRCS  := $(shell [ -d "$(LIBDIR)" ] && find $(LIBDIR) -name '*.c' -o -name '*.cpp' -o -name '*.cc')
+LIBSRCS  := $(shell [ -d "$(LIBDIR)" ] && find "$(LIBDIR)" -name '*.c' -o -name '*.cpp' -o -name '*.cc')
 LIBOBJS  := $(LIBSRCS:$(LIBDIR)/%=$(OBJDIR)/lib/%.o)
 
 # Default target
