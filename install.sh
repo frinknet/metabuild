@@ -47,13 +47,13 @@ elif [ -t 0 ]; then
   docker run --rm -it \
     -u "\$(id -u):\$(id -g)" \
     -v "\$(pwd):/build" \
-    -e PRJ="${PWD##*/}" \
+    -e PRJ="\${PWD##*/}" \
     "\$IMAGE" "\$@"
 else
   docker run --rm -i \
     -u "\$(id -u):\$(id -g)" \
     -v "\$(pwd):/build" \
-    -e PRJ="${PWD##*/}" \
+    -e PRJ="\${PWD##*/}" \
     "\$IMAGE" "\$@"
 fi
 
