@@ -44,7 +44,7 @@ CFLAGS	 += -I$(INCDIR) -I$(LIBDIR)
 CXXFLAGS += -I$(INCDIR) -I$(LIBDIR)
 
 # Smart detection: add each library subdirectory that contains headers
-LIB_HEADER_DIRS = #$(shell [ -d "$(LIBDIR)" ] && find "$(LIBDIR)" -mindepth 1 -type d -exec test -e {}"/*.h" \; -print 2>/dev/null)
+LIB_HEADER_DIRS = $(shell [ -d "$(LIBDIR)" ] && find "$(LIBDIR)" -mindepth 1 -type d -exec test -e "{}/*.h" \; -print 2>/dev/null)
 
 CFLAGS += $(addprefix -I,$(LIB_HEADER_DIRS))
 CXXFLAGS += $(addprefix -I,$(LIB_HEADER_DIRS))
@@ -80,7 +80,7 @@ submodules:
 version:
 	@cat /metabuild/VERSION
 
-# # Get all directories containing C files (excluding templates)
+# Get all directories containing C files (excluding templates)
 SRCDIRS := $(shell \
 	if [ -d "$(SRCDIR)" ]; then \
 		find "$(SRCDIR)" -name '*.c' -not -path "$(TPLDIR)/*" 2>/dev/null | \
@@ -95,8 +95,9 @@ SRCDIRS := $(shell \
 # Function to check if directory contains main()
 define HAS_MAIN
 $(shell D="$(if $(filter .,$(1)),$(SRCDIR),$(SRCDIR)/$(1))"; \
-	[ -d "$$D" ] && find "$$D" -maxdepth 1 -name '*.c' -exec grep -l "int main([^)]*)[[:space:]]*{" {} \; 2>/dev/null | wc -l || echo 0)
+	[ -d "$$D" ] && find "$$D" -maxdepth 1 -name '*.c' -exec awk '/int main *\(.*\)/ { if (/\{/ || getline && /^ *\{/) print FILENAME; exit }' {} \; 2>/dev/null | wc -l || echo 0)
 endef
+
 
 
 # Generate object lists for each directory (preserving structure)
