@@ -44,23 +44,25 @@ VERSION="$VER"
 if [ "\${1:-}" = "update" ]; then
   curl -fsSL "https://github.com/${REPO#*/}/raw/main/install.sh" | exec sh -s -- "\$VERSION"
 elif [ -t 0 ]; then
-  exec docker run --rm -it \
+  docker run --rm -it \
     -u "\$(id -u):\$(id -g)" \
     -v "\$(pwd):/build" \
     "\$IMAGE" "\$@"
 else
-  exec docker run --rm -i \
+  docker run --rm -i \
     -u "\$(id -u):\$(id -g)" \
     -v "\$(pwd):/build" \
     "\$IMAGE" "\$@"
 fi
+
+echo
 EOF
 chmod +x "$WRAP"
 
 echo
 echo "✓ installed: $WRAP"
 echo
-"$WRAP" version 
+"$WRAP" version
 echo
 echo "Run 'metabuild init' to get started."
 echo
