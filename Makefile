@@ -1,6 +1,6 @@
-# METABUILD - (c) 2025 FRINKnet & Friends - 0BSDA/all
+# METABUILD - (c) 2025 FRINKnet & Friends - 0BSD
 
-# Check for USER metabuild.mk  
+# Check for USER metabuild.mk
 MKUSER := $(wildcard $(CURDIR)/.metabuild/metabuild.mk)
 MKROOT := $(wildcard /metabuild/metabuild.mk)
 
@@ -24,7 +24,7 @@ TPLDIR	 := src/templates
 SRCDIR	 := src
 DOCDIR	 := docs
 WEBDIR	 := web
-OUTDIR	 := out/$(TARGET)
+OUTDIR	 := out$(if $(TARGET),/$(TARGET))
 OBJDIR	 := $(OUTDIR)/obj
 LNKDIR	 := $(OUTDIR)/lib
 BINDIR	 := $(OUTDIR)/bin
@@ -80,28 +80,29 @@ submodules:
 version:
 	@cat /metabuild/VERSION
 
-# Get all directories containing C files (excluding templates)
+# # Get all directories containing C files (excluding templates)
 SRCDIRS := $(shell \
 	if [ -d "$(SRCDIR)" ]; then \
 		find "$(SRCDIR)" -name '*.c' -not -path "$(TPLDIR)/*" 2>/dev/null | \
 		sed 's|/[^/]*\.c$$||g' | sort -u | \
 		sed 's|^$(SRCDIR)/\{0,1\}||' | \
 		sed 's|^$$|.|'; \
-		echo \
 	else \
 		echo .; \
 	fi)
 
+
 # Function to check if directory contains main()
 define HAS_MAIN
 $(shell D="$(if $(filter .,$(1)),$(SRCDIR),$(SRCDIR)/$(1))"; \
-	   [ -d "$$D" ] && find "$$D" -maxdepth 1 -name '*.c' -exec grep -l "int main([^)]*)[[:space:]]*{" {} \; 2>/dev/null | wc -l || echo 0)
+	[ -d "$$D" ] && find "$$D" -maxdepth 1 -name '*.c' -exec grep -l "int main([^)]*)[[:space:]]*{" {} \; 2>/dev/null | wc -l || echo 0)
 endef
+
 
 # Generate object lists for each directory (preserving structure)
 define SUBDIR_OBJS
-$(shell D="$(if $(filter .,$(1)),$(SRCDIR),$(SRCDIR)/$(1))"; \
-	   [ -d "$$D" ] && find "$$D" -maxdepth 1 -name '*.c' | sed 's|$(SRCDIR)/||; s|^|$(OBJDIR)/|' | sed 's|\.c$$|.c.o|')
+	$(shell D="$(if $(filter .,$(1)),$(SRCDIR),$(SRCDIR)/$(1))"; \
+		[ -d "$$D" ] && find "$$D" -maxdepth 1 -name '*.c' | sed 's|$(SRCDIR)/||; s|^|$(OBJDIR)/|; s|\.c$$|.c.o|')
 endef
 
 # Separate executables from libraries based on main() presence
@@ -181,7 +182,7 @@ $(OBJDIR)/%.cc.o: $(SRCDIR)/%.cc | $(OBJDIR)
 
 # Compile library files
 $(OBJDIR)/lib/%.c.o: $(LIBDIR)/%.c | $(OBJDIR)
-	@mkdir -p $(dir $@)  
+	@mkdir -p $(dir $@)
 	@echo GEN $@
 	@$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
@@ -222,6 +223,6 @@ clean:
 	@rm -rf $(OUTDIR)
 
 # Include dependency files
--include $(DEPS)
+#-include $(DEPS)
 
 .PHONY: all clean shared submodules rebuild reshared

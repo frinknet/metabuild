@@ -1,7 +1,12 @@
 # metabuild.mk - (c) 2025 FRINKnet & Friends - 0BSD
 METABUILD := $(shell test -f /.dockerenv && echo 1)
 
-# Variables that change  
+# Default vars
+CC		 ?= clang
+CXX		 ?= clang++
+LDFLAGS  ?=
+
+# Variables that change
 REPO   ?= ghcr.io/frinknet/metabuild
 IMAGE  ?= metabuild
 ARCHES ?= x86 x64 arm arm64 wasm wasi
@@ -23,7 +28,7 @@ endif
 clang.cc		:= clang
 clang.cxx		:= clang++
 clang.x86		:= -m32
-clang.x64		:= -m64 
+clang.x64		:= -m64
 clang.arm		:= --target=arm-linux-gnueabihf
 clang.arm64		:= --target=aarch64-linux-gnu
 clang.wasm		:= --target=wasm32-unknown-unknown
@@ -43,7 +48,7 @@ tcc.x86			:= -m32
 tcc.x64			:= -m64
 
 xcc.cc			:= xcc
-xcc.cxx			:= xcc	
+xcc.cxx			:= xcc
 xcc.x86			:= -m32
 xcc.x64			:= -m64
 
@@ -61,7 +66,7 @@ win.x64			:= -m64
 ifdef COMP
 ifdef ARCH
 CC		 := $($(COMP).cc)
-CXX		 := $($(COMP).cxx) 
+CXX		 := $($(COMP).cxx)
 CFLAGS	 += $($(COMP).$(ARCH)) $($(COMP).$(ARCH).c)
 CXXFLAGS += $($(COMP).$(ARCH)) $($(COMP).$(ARCH).cxx)
 LDFLAGS  += $($(COMP).$(ARCH).ld)
@@ -85,11 +90,11 @@ else ifeq ($(COMP),osx)
 else ifeq ($(ARCH),wasm)
 	PLATFORM := WebAssembly
 	EXESUFFIX := .wasm
-	LIBSUFFIX := 
+	LIBSUFFIX :=
 else ifeq ($(ARCH),wasi)
 	PLATFORM := WASI
 	EXESUFFIX := .wasm
-	LIBSUFFIX := 
+	LIBSUFFIX :=
 else
 	PLATFORM := Linux
 	EXESUFFIX :=
@@ -109,12 +114,12 @@ targets:
 	@echo "Available targets:"
 	@$(foreach A,$(ARCHES),$(foreach C,$(COMPS),$(if $($(C).$(A)),echo "	$(C)-$(A)";)))
 
-# Diagnostic info  
+# Diagnostic info
 info:
 	@echo "METABUILD: $(METABUILD)"
 	@echo "PLATFORM: $(PLATFORM)"
 	@echo "CC: $(CC)"
-	@echo "CXX: $(CXX)" 
+	@echo "CXX: $(CXX)"
 	@echo "TARGET: $(TARGET)"
 	@echo "EXESUFFIX: $(EXESUFFIX)"
 	@echo "LIBSUFFIX: $(LIBSUFFIX)"

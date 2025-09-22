@@ -42,16 +42,18 @@ set -eu
 IMAGE="$IMAGE:latest"
 VERSION="$VER"
 if [ "\${1:-}" = "update" ]; then
-  curl -fsSL "https://github.com/${REPO#*/}/raw/main/install.sh" | exec sh -s -- "\$VERSION"
+  curl -fsSL "https://github.com/${REPO#*/}/raw/main/install.sh" | exec sh -s -- "\${2:-\$VERSION}"
 elif [ -t 0 ]; then
   docker run --rm -it \
     -u "\$(id -u):\$(id -g)" \
     -v "\$(pwd):/build" \
+    -e PRJ="${PWD##*/}" \
     "\$IMAGE" "\$@"
 else
   docker run --rm -i \
     -u "\$(id -u):\$(id -g)" \
     -v "\$(pwd):/build" \
+    -e PRJ="${PWD##*/}" \
     "\$IMAGE" "\$@"
 fi
 
