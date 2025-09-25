@@ -200,10 +200,12 @@ $(OBJDIR)/lib/%.cc.o: $(LIBDIR)/%.cc | $(OBJDIR)
 # Generate static library rules
 $(foreach lib,$(filter-out .,$(LIBDIRS)),$(eval $(call MAKE_LIB,$(lib))))
 
-# Create static library
+# Only create library rule if LIBOBJS is not empty
+ifneq ($(LIBOBJS),)
 $(LNKDIR)/$(PRJ).a: $(LIBOBJS) | $(LNKDIR)
 	@echo GEN $@
 	@$(AR) rcs $@ $^
+endif
 
 # Generate shared library rules
 $(foreach lib,$(filter-out .,$(LIBDIRS)),$(eval $(call MAKE_SHARED_LIB,$(lib))))
@@ -224,6 +226,6 @@ clean:
 	@rm -rf $(OUTDIR)
 
 # Include dependency files
-#-include $(DEPS)
+-include $(DEPS)
 
 .PHONY: all clean shared submodules rebuild reshared
