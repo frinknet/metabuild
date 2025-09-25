@@ -53,8 +53,8 @@ EXT_HEADER_DIRS = $(shell [ -d "$(EXTDIR)" ] && find "$(EXTDIR)" -mindepth 1 -ty
 CFLAGS += $(addprefix -I,$(EXT_HEADER_DIRS))
 CXXFLAGS += $(addprefix -I,$(EXT_HEADER_DIRS))
 
-CFLAGS	 += -fPIC -fPIE -MMD -MP
-CXXFLAGS += -fPIC -fPIE -MMD -MP
+CFLAGS	 += -fPIC -MMD -MP
+CXXFLAGS += -fPIC -MMD -MP
 LDFLAGS  += -pie
 LDLIBS	 ?=
 
@@ -86,27 +86,32 @@ version:
 
 # Get all directories containing C files (excluding templates)
 SRCDIRS := $(shell \
-	if [ -d "$(SRCDIR)" ]; then \
-		find "$(SRCDIR)" -name '*.c' -not -path "$(TPLDIR)/*" 2>/dev/null | \
-		sed 's|/[^/]*\.c$$||g' | sort -u | \
-		sed 's|^$(SRCDIR)/\{0,1\}||' | \
-		sed 's|^$$|.|'; \
-	else \
-		echo .; \
-	fi)
+  if [ -d "$(SRCDIR)" ]; then \
+    find "$(SRCDIR)" -type f \( -name '*.c' -o -name '*.cpp' -o -name '*.cc' \) -not -path "$(TPLDIR)/*" -print 2>/dev/null | \
+    sed 's|[^/]*$$||; s|/$$||; s|^$(SRCDIR)/\{0,1\}||; s|^$$|.|' | sort -u; \
+  else \
+    echo .; \
+  fi)
 
+# Function to check if directory contains C++ files
+define HAS_CXX
+$(shell D="$(if $(filter .,$(1)),$(SRCDIR),$(SRCDIR)/$(1))"; \
+	[ -d "$$D" ] && find "$$D" -maxdepth 1 \( -name '*.cpp' -o -name '*.cc' \) 2>/dev/null | wc -l || echo 0)
+endef
 
 # Function to check if directory contains main()
 define HAS_MAIN
 $(shell D="$(if $(filter .,$(1)),$(SRCDIR),$(SRCDIR)/$(1))"; \
-	[ -d "$$D" ] && find "$$D" -maxdepth 1 -name '*.c' -exec awk '/int main *\(.*\)/ { if (/\{/ || getline && /^ *\{/) print FILENAME; exit }' {} \; 2>/dev/null | wc -l || echo 0)
+	[ -d "$$D" ] && find "$$D" -maxdepth 1 \( -name '*.c' -o -name '*.cpp' -o -name '*.cc' \) -exec awk '/int main *\(.*\)/ { if (/\{/ || getline && /^ *\{/) print FILENAME; exit }' {} \; 2>/dev/null | wc -l || echo 0)
 endef
 
 # Generate object lists for each directory (preserving structure)
 define SUBDIR_OBJS
-	$(shell D="$(if $(filter .,$(1)),$(SRCDIR),$(SRCDIR)/$(1))"; \
-		[ -d "$$D" ] && find "$$D" -maxdepth 1 -name '*.c' | sed 's|$(SRCDIR)/||; s|^|$(OBJDIR)/|; s|\.c$$|.c.o|')
+  $(shell D="$(if $(filter .,$(1)),$(SRCDIR),$(SRCDIR)/$(1))"; \
+    [ -d "$$D" ] && find "$$D" -maxdepth 1 -type f \( -name '*.c' -o -name '*.cc' -o -name '*.cpp' \) | \
+    sed 's|$(SRCDIR)/||; s|^|$(OBJDIR)/|; s|\.c$$|.c.o|; s|\.cc$$|.cc.o|; s|\.cpp$$|.cpp.o|' )
 endef
+
 
 # Separate executables from libraries based on main() presence
 BINDIRS := $(foreach dir,$(SRCDIRS),$(if $(filter-out 0,$(call HAS_MAIN,$(dir))),$(dir)))
@@ -126,11 +131,34 @@ BINS := $(foreach dir,$(BINDIRS),$(if $(filter .,$(dir)),$(BINDIR)/$(PRJ)$(EXESU
 LIBS := $(foreach dir,$(LIBDIRS),$(if $(filter .,$(dir)),$(LIBDIR)/$(PRJ).a,$(LIBDIR)/lib$(call CLEAN_NAME,$(dir)).a))
 SHARED_LIBS := $(foreach dir,$(LIBDIRS),$(if $(filter .,$(dir)),$(LIBDIR)/$(PRJ)$(LIBSUFFIX),$(LIBDIR)/lib$(call CLEAN_NAME,$(dir))$(LIBSUFFIX)))
 
+
+# External libraries (separate from internal code)
+EXT_LIBDIRS := $(shell [ -d "$(EXTDIR)" ] && find "$(EXTDIR)" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sed 's|$(EXTDIR)/||')
+EXT_STATIC_LIBS := $(foreach ext,$(EXT_LIBDIRS),$(LIBDIR)/lib$(ext).a)
+EXT_SHARED_LIBS := $(foreach ext,$(EXT_LIBDIRS),$(LIBDIR)/lib$(ext)$(LIBSUFFIX))
+
+# Build external libraries as separate targets
+$(foreach ext,$(EXT_LIBDIRS),$(eval $(call MAKE_EXTERNAL_LIB,$(ext))))
+
+# Build external libraries as separate targets
+define MAKE_EXTERNAL_LIB
+$(LIBDIR)/lib$(1).a: $(shell find $(EXTDIR)/$(1) \( -name '*.c' -o -name '*.cpp' -o -name '*.cc' \) 2>/dev/null | sed 's|$(EXTDIR)/|$(OBJDIR)/lib/|; s|\.\(c\|cpp\|cc\)$$|.\1.o|') | $(LIBDIR)
+	@echo GEN $$@
+	@$$(AR) rcs $$@ $$^
+
+$(LIBDIR)/lib$(1)$(LIBSUFFIX): $(LIBDIR)/lib$(1).a | $(LIBDIR)
+	@echo GEN $$@
+	@$$(CC) -shared -nostartfiles -Wl,--whole-archive $$< -Wl,--no-whole-archive -o $$@
+endef
+
+# If root is a library, include both variants
+ROOT_SHARED := $(if $(filter .,$(LIBDIRS)),$(LIBDIR)/$(PRJ)$(LIBSUFFIX))
+
 # Default build (static only)
-all: $(BINS) $(LIBS)
+all: $(BINS) $(LIBS) $(EXT_STATIC_LIBS) $(ROOT_SHARED)
 
 # Optional shared libraries
-shared: $(SHARED_LIBS) $(LIBDIR)/$(PRJ)$(LIBSUFFIX)
+shared: $(SHARED_LIBS) $(EXT_SHARED_LIBS)
 
 # Function to find related libraries for an executable
 define FIND_RELATED_LIBS
@@ -141,26 +169,23 @@ endef
 define MAKE_BIN
 $(if $(filter .,$(1)),$(BINDIR)/$(PRJ)$(EXESUFFIX),$(BINDIR)/$(call CLEAN_NAME,$(1))$(EXESUFFIX)): $(call SUBDIR_OBJS,$(1)) $(call FIND_RELATED_LIBS,$(1)) | $(BINDIR)
 	@echo GEN $$@
-	$$(CC) $$(LDFLAGS) $(call SUBDIR_OBJS,$(1)) $(call FIND_RELATED_LIBS,$(1)) -o $$@ $$(LDLIBS)
+	$(if $(filter-out 0,$(call HAS_CXX,$(1))),$$(CXX),$$(CC)) $$(LDFLAGS) -fPIE $(call SUBDIR_OBJS,$(1)) $(call FIND_RELATED_LIBS,$(1)) -o $$@ $$(LDLIBS)
 endef
 
 # pattern-generate static library rules (default)
 define MAKE_LIB
 $(if $(filter .,$(1)),$(LIBDIR)/$(PRJ).a,$(LIBDIR)/lib$(call CLEAN_NAME,$(1)).a): $(call SUBDIR_OBJS,$(1)) | $(LIBDIR)
 	@echo GEN $$@
-	$$(AR) rcs $$@ $$^
+	@$$(AR) rcs $$@ $$^
 endef
 
-# pattern-generate shared library rules (optional)
+# pattern-generate shared library rules (from static library)
 define MAKE_SHARED_LIB
-$(if $(filter .,$(1)),$(LIBDIR)/$(PRJ)$(LIBSUFFIX),$(LIBDIR)/lib$(call CLEAN_NAME,$(1))$(LIBSUFFIX)): $(call SUBDIR_OBJS,$(1)) | $(LIBDIR)
+$(if $(filter .,$(1)),$(LIBDIR)/$(PRJ)$(LIBSUFFIX),$(LIBDIR)/lib$(call CLEAN_NAME,$(1))$(LIBSUFFIX)): $(if $(filter .,$(1)),$(LIBDIR)/$(PRJ).a,$(LIBDIR)/lib$(call CLEAN_NAME,$(1)).a) | $(LIBDIR)
 	@echo GEN $$@
-ifeq ($(LIBSUFFIX),.dll)
-	$$(CC) -shared $$^ -o $$@ $$(LDFLAGS)
-else
-	$$(CC) -shared $$^ -o $$@ $$(LDFLAGS)
-endif
+	@$$(CC) -shared -nostartfiles -Wl,--whole-archive $$< -Wl,--no-whole-archive -o $$@
 endef
+
 
 $(foreach bin,$(BINDIRS),$(eval $(call MAKE_BIN,$(bin))))
 
@@ -203,27 +228,11 @@ $(OBJDIR)/lib/%.cc.o: $(EXTDIR)/%.cc | $(OBJDIR)
 	@echo GEN $@
 	@$(CXX) $(CXXFLAGS) -MMD -MP -c $< -o $@
 
-# Only create library rule if EXTOBJS is not empty
-ifneq ($(strip $(OBJS) $(EXTOBJS)),)
-$(LIBDIR)/$(PRJ).a: $(OBJS) $(EXTOBJS) | $(LIBDIR)
-	@echo GEN $@
-	@$(AR) rcs $@ $^
-endif
-
 # Generate static library rules
 $(foreach lib,$(LIBDIRS),$(eval $(call MAKE_LIB,$(lib))))
 
 # Generate shared library rules
 $(foreach lib,$(LIBDIRS),$(eval $(call MAKE_SHARED_LIB,$(lib))))
-
-# Shared version of external lib
-$(LIBDIR)/$(PRJ)$(LIBSUFFIX): $(EXTOBJS) | $(LIBDIR)
-	@echo GEN $@
-ifeq ($(LIBSUFFIX),.dll)
-	$(CC) -shared $^ -o $@ $(LDFLAGS)
-else
-	$(CC) -shared $^ -o $@ $(LDFLAGS)
-endif
 
 rebuild: clean all
 reshared: clean shared
