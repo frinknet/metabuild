@@ -1,3 +1,5 @@
+# tests.mk - (c) 2025 FRINKnet & Friends - 0BSD
+
 # Portability detection
 TEST_PARALLEL := $(shell nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
 TEST_TIMER := $(shell which gtime 2>/dev/null || which time 2>/dev/null || echo time)
@@ -26,16 +28,16 @@ test:
 
 # Pattern: (TYPE)-test-(TEST) - runs specific test
 %-test-%:
-	@$(eval PARTS := $(subst -, ,$*))
-	@$(eval TYPE := $(word 1, $(PARTS)))
-	@$(eval TEST := $(word 3, $(PARTS)))
+	@$(eval PARTS := $*)
+	@$(eval TYPE := $(word 1,$(subst -, ,$(PARTS))))
+	@$(eval TEST := $(subst $(TYPE)-test-,,$(PARTS)))
 	@$(MAKE) test-only TYPE=$(TYPE) TEST=$(TEST)
 
 # Pattern: (TYPE)-memory-(TEST) - memory profile specific test
 %-memory-%:
 	@$(eval PARTS := $(subst -, ,$*))
-	@$(eval TYPE := $(word 1, $(PARTS)))
-	@$(eval TEST := $(word 3, $(PARTS)))
+	@$(eval TYPE := $(word 1,$(subst -, ,$(PARTS))))
+	@$(eval TEST := $(subst $(TYPE)-memory-,,$(PARTS)))
 	@echo "Memory profiling $(TYPE)/$(TEST)..."
 	@mkdir -p $(OUTDIR)/test
 	@$(CC) $(CFLAGS) -fsanitize=address -I$(TESTDIR) $(TESTDIR)/$(TYPE)/$(TEST).c $(TEST_OBJECTS) $(filter %.a,$(LIBS)) -o $(OUTDIR)/test/$(TYPE)-$(TEST)-mem $(LDFLAGS)
@@ -44,16 +46,16 @@ test:
 # Pattern: (TYPE)-timing-(TEST) - time specific test
 %-timing-%:
 	@$(eval PARTS := $(subst -, ,$*))
-	@$(eval TYPE := $(word 1, $(PARTS)))
-	@$(eval TEST := $(word 3, $(PARTS)))
+	@$(eval TYPE := $(word 1,$(subst -, ,$(PARTS))))
+	@$(eval TEST := $(subst $(TYPE)-timing-,,$(PARTS)))
 	@printf "Timing $(TYPE)/$(TEST): "
 	@$(TEST_TIMER) $(MAKE) test-only TYPE=$(TYPE) TEST=$(TEST) 2>&1 | tail -1
 
-# Pattern: (TYPE)-profile-(TEST) - full profile specific test  
+# Pattern: (TYPE)-profile-(TEST) - full profile specific test
 %-profile-%:
 	@$(eval PARTS := $(subst -, ,$*))
-	@$(eval TYPE := $(word 1, $(PARTS)))
-	@$(eval TEST := $(word 3, $(PARTS)))
+	@$(eval TYPE := $(word 1,$(subst -, ,$(PARTS))))
+	@$(eval TEST := $(subst $(TYPE)-profile-,,$(PARTS)))
 	@echo "Profiling $(TYPE)/$(TEST)..."
 	@$(TEST_TIMER) $(MAKE) test-only TYPE=$(TYPE) TEST=$(TEST) 2>&1 | \
 		grep -E "(User time|System time|Elapsed.*real|Maximum resident set size)"
@@ -93,8 +95,7 @@ test-single:
 	@$(eval TEST := $(if $(TEST_PATH),$(notdir $(TEST_PATH)),))
 	@$(MAKE) test-line TYPE=$(TYPE) TEST=$(TEST)
 
-
-# Parallel test execution using xargs
+# Parallel test execution
 test-parallel:
 	@echo "Running tests in parallel ($(TEST_PARALLEL) cores)..."
 
@@ -102,6 +103,10 @@ test-parallel:
 		sed 's|$(TESTDIR)/||' | sed 's|/|-|' | sed 's|^|test-|' | \
 		xargs -P$(TEST_PARALLEL) -I{} $(MAKE) {} 2>/dev/null || true
 
+# List available tests
+test-list:
+	@echo "Available tests:"
+	@find $(TESTDIR) -name "*.c" | sed 's|$(TESTDIR)/||; s|\.c$$||' | sort
 
 # Profile test suite performance
 test-profile:
@@ -109,7 +114,7 @@ test-profile:
 	@$(TEST_TIMER) $(MAKE) test 2>&1 | \
 		grep -E "(User time|System time|Elapsed.*real|Maximum resident set size)"
 
-# Suppress pattern matching for test targets  
+# Suppress pattern matching for test targets
 ifneq (,$(filter %-test %-test-% %-memory-% %-timing-% %-profile-%, $(MAKECMDGOALS)))
 %:
 	@:

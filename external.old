@@ -1,0 +1,96 @@
+# external.mk - (c) 2025 FRINKnet & Friends - 0BSD
+
+# Discover all external libraries
+EXTERNAL_LIBS := $(notdir $(wildcard $(EXTDIR)/*))
+
+# Detection function for each library type
+define DETECT_LIB_TYPE
+$(shell \
+if [ -f $(EXTDIR)/$(1)/metabuild.mk ]; then \
+	echo "metabuild"; \
+elif [ -f $(EXTDIR)/$(1)/CMakeLists.txt ]; then \
+	echo "cmake"; \
+elif [ -f $(EXTDIR)/$(1)/configure ] || [ -f $(EXTDIR)/$(1)/Makefile ]; then \
+	echo "autotools"; \
+elif [ -d $(EXTDIR)/$(1)/.git ]; then \
+	echo "submodule"; \
+elif ls $(EXTDIR)/$(1)/lib*.a $(EXTDIR)/$(1)/lib*.so 2>/dev/null | head -1; then \
+	echo "prebuilt"; \
+else \
+	echo "header-only"; \
+fi)
+endef
+
+# Generate build rules for each external library
+$(foreach lib,$(EXTERNAL_LIBS),$(eval \
+$(lib)_TYPE := $(call DETECT_LIB_TYPE,$(lib)) \
+\
+$(if $(filter metabuild,$($(lib)_TYPE)), \
+	$(lib)/build: \
+		@echo "Building METABUILD library: $(lib)" \
+		@cd $(EXTDIR)/$(lib) && $$(MAKE) \
+		@cp $(EXTDIR)/$(lib)/out/*/lib/*.a $(LNKDIR)/ 2>/dev/null || true \
+	CFLAGS += -I$(EXTDIR)/$(lib)/include \
+	LDFLAGS += -L$(LNKDIR) -l$(lib), \
+\
+$(if $(filter cmake,$($(lib)_TYPE)), \
+	$(lib)/build: \
+		@echo "Building CMake library: $(lib)" \
+		@mkdir -p $(EXTDIR)/$(lib)/build \
+		@cd $(EXTDIR)/$(lib)/build && cmake -DCMAKE_BUILD_TYPE=Release .. && make \
+		@find $(EXTDIR)/$(lib)/build -name "lib*.a" -exec cp {} $(LNKDIR)/ \; \
+	CFLAGS += -I$(EXTDIR)/$(lib)/include -I$(EXTDIR)/$(lib) \
+	LDFLAGS += -L$(LNKDIR) -l$(lib), \
+\
+$(if $(filter autotools,$($(lib)_TYPE)), \
+	$(lib)/build: \
+		@echo "Building Autotools library: $(lib)" \
+		@cd $(EXTDIR)/$(lib) && (test -f configure || autoreconf -i) && ./configure --prefix=$(CURDIR)/$(EXTDIR)/$(lib)/install && make && make install \
+		@cp $(EXTDIR)/$(lib)/install/lib/lib*.a $(LNKDIR)/ 2>/dev/null || true \
+	CFLAGS += -I$(EXTDIR)/$(lib)/install/include -I$(EXTDIR)/$(lib) \
+	LDFLAGS += -L$(LNKDIR) -l$(lib), \
+\
+$(if $(filter submodule,$($(lib)_TYPE)), \
+	$(lib)/build: \
+		@echo "Initializing submodule: $(lib)" \
+		@git submodule update --init --recursive $(EXTDIR)/$(lib) \
+		@if [ -f $(EXTDIR)/$(lib)/metabuild.mk ]; then \
+			cd $(EXTDIR)/$(lib) && $$(MAKE); \
+		elif [ -f $(EXTDIR)/$(lib)/CMakeLists.txt ]; then \
+			mkdir -p $(EXTDIR)/$(lib)/build && cd $(EXTDIR)/$(lib)/build && cmake .. && make; \
+		elif [ -f $(EXTDIR)/$(lib)/Makefile ]; then \
+			cd $(EXTDIR)/$(lib) && make; \
+		fi \
+		@find $(EXTDIR)/$(lib) -name "lib*.a" -exec cp {} $(LNKDIR)/ \; 2>/dev/null || true \
+	CFLAGS += -I$(EXTDIR)/$(lib)/include -I$(EXTDIR)/$(lib) \
+	LDFLAGS += -L$(LNKDIR) -l$(lib), \
+\
+$(if $(filter prebuilt,$($(lib)_TYPE)), \
+	$(lib)/build: \
+		@echo "Using prebuilt library: $(lib)" \
+		@cp $(EXTDIR)/$(lib)/lib*.a $(LNKDIR)/ 2>/dev/null || true \
+	$(if $(wildcard $(EXTDIR)/$(lib)/include), \
+		CFLAGS += -I$(EXTDIR)/$(lib)/include, \
+		CFLAGS += -I$(EXTDIR)/$(lib)) \
+	LDFLAGS += -L$(LNKDIR) $(addprefix -l,$(basename $(notdir $(wildcard $(EXTDIR)/$(lib)/lib*.a)))), \
+\
+	$(lib)/build: \
+		@echo "Header-only library: $(lib)" \
+	$(if $(wildcard $(EXTDIR)/$(lib)/include), \
+		CFLAGS += -I$(EXTDIR)/$(lib)/include, \
+		$(if $(wildcard $(EXTDIR)/$(lib)/single_include), \
+			CFLAGS += -I$(EXTDIR)/$(lib)/single_include, \
+			CFLAGS += -I$(EXTDIR)/$(lib))) \
+))))) \
+\
+all: $(lib)/build \
+))
+
+# Meta-target to build all external libraries
+.PHONY: external-libs $(foreach lib,$(EXTERNAL_LIBS),$(lib)/build)
+external-libs: $(foreach lib,$(EXTERNAL_LIBS),$(lib)/build)
+
+# Debug target to show detection results
+debug-external-libs:
+	@echo "External libraries detected:"
+	@$(foreach lib,$(EXTERNAL_LIBS),echo "	$(lib): $(call DETECT_LIB_TYPE,$(lib))";)

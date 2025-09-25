@@ -17,17 +17,21 @@ PRJ ?= $(shell basename $(CURDIR))
 VER := $(shell git describe --tags --abbrev=0 2>/dev/null || git rev-parse --abbrev-ref HEAD 2>/dev/null || echo dev)
 
 # Directory structure
-LIBDIR	 := lib
+EXTDIR	 := lib
 SYSDIR	 := syslib
 INCDIR	 := include
 TPLDIR	 := src/templates
 SRCDIR	 := src
 DOCDIR	 := docs
 WEBDIR	 := web
+
+# Output Directories
 OUTDIR	 := out$(if $(TARGET),/$(TARGET))
 OBJDIR	 := $(OUTDIR)/obj
-LNKDIR	 := $(OUTDIR)/lib
+LIBDIR	 := $(OUTDIR)/lib
 BINDIR	 := $(OUTDIR)/bin
+
+# Test directories
 TESTDIR	 := tests
 UNITDIR	 := $(TESTDIR)/unit
 CASEDIR	 := $(TESTDIR)/case
@@ -40,14 +44,14 @@ ifneq ($(wildcard $(SYSDIR)),)
 endif
 
 # Compiler flags using the directory structure
-CFLAGS	 += -I$(INCDIR) -I$(LIBDIR)
-CXXFLAGS += -I$(INCDIR) -I$(LIBDIR)
+CFLAGS	 += -I$(INCDIR) -I$(EXTDIR)
+CXXFLAGS += -I$(INCDIR) -I$(EXTDIR)
 
 # Smart detection: add each library subdirectory that contains headers
-LIB_HEADER_DIRS = $(shell [ -d "$(LIBDIR)" ] && find "$(LIBDIR)" -mindepth 1 -type d -exec test -e "{}/*.h" \; -print 2>/dev/null)
+EXT_HEADER_DIRS = $(shell [ -d "$(EXTDIR)" ] && find "$(EXTDIR)" -mindepth 1 -type d -exec test -e "{}/*.h" \; -print 2>/dev/null)
 
-CFLAGS += $(addprefix -I,$(LIB_HEADER_DIRS))
-CXXFLAGS += $(addprefix -I,$(LIB_HEADER_DIRS))
+CFLAGS += $(addprefix -I,$(EXT_HEADER_DIRS))
+CXXFLAGS += $(addprefix -I,$(EXT_HEADER_DIRS))
 
 CFLAGS	 += -fPIC -fPIE -MMD -MP
 CXXFLAGS += -fPIC -fPIE -MMD -MP
@@ -55,7 +59,7 @@ LDFLAGS  += -pie
 LDLIBS	 ?=
 
 # Find all source files (recursively in src/)
-SRCS := $(shell [ -d "$(SRCDIR)" ] && find "$(SRCDIR)" -name '*.c' -o -name '*.cpp' -o -name '*.cc' 2>/dev/null)
+SRCS := $(shell [ -d "$(SRCDIR)" ] && find "$(SRCDIR)" -type f \( -name '*.c' -o -name '*.cpp' -o -name '*.cc' \) 2>/dev/null)
 OBJS := $(SRCS:$(SRCDIR)/%=$(OBJDIR)/%.o)
 DEPS := $(OBJS:.o=.d)
 
@@ -64,8 +68,8 @@ MKLOCAL := $(filter-out $(MKUSER),$(wildcard $(CURDIR)/.metabuild/*.mk))
 MKCORE := $(filter-out $(MKROOT) $(addprefix /metabuild/,$(notdir $(MKLOCAL))),$(wildcard /metabuild/*.mk))
 
 # Library sources (separate from main sources)
-LIBSRCS  := $(shell [ -d "$(LIBDIR)" ] && find "$(LIBDIR)" -name '*.c' -o -name '*.cpp' -o -name '*.cc')
-LIBOBJS  := $(LIBSRCS:$(LIBDIR)/%=$(OBJDIR)/lib/%.o)
+EXTSRCS := $(shell [ -d "$(EXTDIR)" ] && find "$(EXTDIR)" -type f \( -name '*.c' -o -name '*.cpp' -o -name '*.cc' \) 2>/dev/null)
+EXTOBJS := $(EXTSRCS:$(EXTDIR)/%=$(OBJDIR)/lib/%.o)
 
 # Default target
 .DEFAULT_GOAL := all
@@ -98,8 +102,6 @@ $(shell D="$(if $(filter .,$(1)),$(SRCDIR),$(SRCDIR)/$(1))"; \
 	[ -d "$$D" ] && find "$$D" -maxdepth 1 -name '*.c' -exec awk '/int main *\(.*\)/ { if (/\{/ || getline && /^ *\{/) print FILENAME; exit }' {} \; 2>/dev/null | wc -l || echo 0)
 endef
 
-
-
 # Generate object lists for each directory (preserving structure)
 define SUBDIR_OBJS
 	$(shell D="$(if $(filter .,$(1)),$(SRCDIR),$(SRCDIR)/$(1))"; \
@@ -110,6 +112,10 @@ endef
 BINDIRS := $(foreach dir,$(SRCDIRS),$(if $(filter-out 0,$(call HAS_MAIN,$(dir))),$(dir)))
 LIBDIRS := $(filter-out $(BINDIRS),$(SRCDIRS))
 
+# Parsing directory structure
+BINOBJS := $(strip $(foreach d,$(BINDIRS),$(call SUBDIR_OBJS,$(d))))
+LIBOBJS := $(strip $(foreach d,$(LIBDIRS),$(call SUBDIR_OBJS,$(d))))
+
 # Function to generate clean target names
 define CLEAN_NAME
 $(subst /,_,$(1))
@@ -117,18 +123,18 @@ endef
 
 # Generate targets with special root handling
 BINS := $(foreach dir,$(BINDIRS),$(if $(filter .,$(dir)),$(BINDIR)/$(PRJ)$(EXESUFFIX),$(BINDIR)/$(call CLEAN_NAME,$(dir))$(EXESUFFIX)))
-LIBS := $(foreach dir,$(LIBDIRS),$(if $(filter .,$(dir)),$(LNKDIR)/$(PRJ).a,$(LNKDIR)/lib$(call CLEAN_NAME,$(dir)).a))
-SHARED_LIBS := $(foreach dir,$(LIBDIRS),$(if $(filter .,$(dir)),$(LNKDIR)/$(PRJ)$(LIBSUFFIX),$(LNKDIR)/lib$(call CLEAN_NAME,$(dir))$(LIBSUFFIX)))
+LIBS := $(foreach dir,$(LIBDIRS),$(if $(filter .,$(dir)),$(LIBDIR)/$(PRJ).a,$(LIBDIR)/lib$(call CLEAN_NAME,$(dir)).a))
+SHARED_LIBS := $(foreach dir,$(LIBDIRS),$(if $(filter .,$(dir)),$(LIBDIR)/$(PRJ)$(LIBSUFFIX),$(LIBDIR)/lib$(call CLEAN_NAME,$(dir))$(LIBSUFFIX)))
 
 # Default build (static only)
 all: $(BINS) $(LIBS)
 
 # Optional shared libraries
-shared: $(SHARED_LIBS) $(LNKDIR)/$(PRJ)$(LIBSUFFIX)
+shared: $(SHARED_LIBS) $(LIBDIR)/$(PRJ)$(LIBSUFFIX)
 
 # Function to find related libraries for an executable
 define FIND_RELATED_LIBS
-$(foreach lib,$(LIBDIRS),$(if $(filter $(word 1,$(subst /, ,$(1))),$(word 1,$(subst /, ,$(lib)))),$(if $(filter .,$(lib)),$(LNKDIR)/$(PRJ).a,$(LNKDIR)/lib$(call CLEAN_NAME,$(lib)).a)))
+$(foreach lib,$(LIBDIRS),$(if $(filter $(word 1,$(subst /, ,$(1))),$(word 1,$(subst /, ,$(lib)))),$(if $(filter .,$(lib)),$(LIBDIR)/$(PRJ).a,$(LIBDIR)/lib$(call CLEAN_NAME,$(lib)).a)))
 endef
 
 # pattern-generate executable rules (link with related libs)
@@ -140,14 +146,14 @@ endef
 
 # pattern-generate static library rules (default)
 define MAKE_LIB
-$(if $(filter .,$(1)),$(LNKDIR)/$(PRJ).a,$(LNKDIR)/lib$(call CLEAN_NAME,$(1)).a): $(call SUBDIR_OBJS,$(1)) | $(LNKDIR)
+$(if $(filter .,$(1)),$(LIBDIR)/$(PRJ).a,$(LIBDIR)/lib$(call CLEAN_NAME,$(1)).a): $(call SUBDIR_OBJS,$(1)) | $(LIBDIR)
 	@echo GEN $$@
 	$$(AR) rcs $$@ $$^
 endef
 
 # pattern-generate shared library rules (optional)
 define MAKE_SHARED_LIB
-$(if $(filter .,$(1)),$(LNKDIR)/$(PRJ)$(LIBSUFFIX),$(LNKDIR)/lib$(call CLEAN_NAME,$(1))$(LIBSUFFIX)): $(call SUBDIR_OBJS,$(1)) | $(LNKDIR)
+$(if $(filter .,$(1)),$(LIBDIR)/$(PRJ)$(LIBSUFFIX),$(LIBDIR)/lib$(call CLEAN_NAME,$(1))$(LIBSUFFIX)): $(call SUBDIR_OBJS,$(1)) | $(LIBDIR)
 	@echo GEN $$@
 ifeq ($(LIBSUFFIX),.dll)
 	$$(CC) -shared $$^ -o $$@ $$(LDFLAGS)
@@ -162,7 +168,7 @@ $(foreach bin,$(BINDIRS),$(eval $(call MAKE_BIN,$(bin))))
 $(foreach dir,$(filter-out .,$(SRCDIRS)),$(eval $$(OBJDIR)/$(dir): ; @mkdir -p $$@))
 
 # Create output directories
-$(OBJDIR) $(LNKDIR) $(BINDIR):
+$(OBJDIR) $(LIBDIR) $(BINDIR):
 	@mkdir -p $@
 
 # Compile source files to objects
@@ -182,36 +188,36 @@ $(OBJDIR)/%.cc.o: $(SRCDIR)/%.cc | $(OBJDIR)
 	@$(CXX) $(CXXFLAGS) -c $< -o $@
 
 # Compile library files
-$(OBJDIR)/lib/%.c.o: $(LIBDIR)/%.c | $(OBJDIR)
+$(OBJDIR)/lib/%.c.o: $(EXTDIR)/%.c | $(OBJDIR)
 	@mkdir -p $(dir $@)
 	@echo GEN $@
 	@$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
-$(OBJDIR)/lib/%.cpp.o: $(LIBDIR)/%.cpp | $(OBJDIR)
+$(OBJDIR)/lib/%.cpp.o: $(EXTDIR)/%.cpp | $(OBJDIR)
 	@mkdir -p $(dir $@)
 	@echo GEN $@
 	@$(CXX) $(CXXFLAGS) -MMD -MP -c $< -o $@
 
-$(OBJDIR)/lib/%.cc.o: $(LIBDIR)/%.cc | $(OBJDIR)
+$(OBJDIR)/lib/%.cc.o: $(EXTDIR)/%.cc | $(OBJDIR)
 	@mkdir -p $(dir $@)
 	@echo GEN $@
 	@$(CXX) $(CXXFLAGS) -MMD -MP -c $< -o $@
 
-# Generate static library rules
-$(foreach lib,$(filter-out .,$(LIBDIRS)),$(eval $(call MAKE_LIB,$(lib))))
-
-# Only create library rule if LIBOBJS is not empty
-ifneq ($(LIBOBJS),)
-$(LNKDIR)/$(PRJ).a: $(LIBOBJS) | $(LNKDIR)
+# Only create library rule if EXTOBJS is not empty
+ifneq ($(strip $(OBJS) $(EXTOBJS)),)
+$(LIBDIR)/$(PRJ).a: $(OBJS) $(EXTOBJS) | $(LIBDIR)
 	@echo GEN $@
 	@$(AR) rcs $@ $^
 endif
 
+# Generate static library rules
+$(foreach lib,$(LIBDIRS),$(eval $(call MAKE_LIB,$(lib))))
+
 # Generate shared library rules
-$(foreach lib,$(filter-out .,$(LIBDIRS)),$(eval $(call MAKE_SHARED_LIB,$(lib))))
+$(foreach lib,$(LIBDIRS),$(eval $(call MAKE_SHARED_LIB,$(lib))))
 
 # Shared version of external lib
-$(LNKDIR)/$(PRJ)$(LIBSUFFIX): $(LIBOBJS) | $(LNKDIR)
+$(LIBDIR)/$(PRJ)$(LIBSUFFIX): $(EXTOBJS) | $(LIBDIR)
 	@echo GEN $@
 ifeq ($(LIBSUFFIX),.dll)
 	$(CC) -shared $^ -o $@ $(LDFLAGS)
