@@ -147,7 +147,7 @@ EXTSRCS := $(shell [ -d "$(EXTDIR)" ] && find "$(EXTDIR)" -type f \( -name '*.c'
 EXTOBJS := $(EXTSRCS:$(EXTDIR)/%=$(OBJDIR)/lib/%.o)
 
 # Default target
-.DEFAULT_GOAL := all
+.DEFAULT_GOAL := help
 
 -include $(MKCORE)
 -include $(MKLOCAL)
@@ -191,15 +191,11 @@ $(LIBDIR)/lib$(1)$(LIBSUFFIX): $(LIBDIR)/lib$(1).a | $(LIBDIR)
 	@$$(CC) -shared -nostartfiles -Wl,--whole-archive $$< -Wl,--no-whole-archive -o $$@
 endef
 
-# If root is a library, include both variants
-ROOTLIB := $(if $(filter . src,$(LIBDIRS)),$(LIBDIR)/$(PRJ)$(LIBSUFFIX))
-
 # Default build (static only)
-all: $(BINS) $(LIBS) $(EXT_STATIC_LIBS) $(ROOTLIB)
+build: $(EXT_STATIC_LIBS) $(BINS) $(LIBS)
 
 # Optional shared libraries
 shared: $(SHARED_LIBS) $(EXT_SHARED_LIBS)
-
 
 $(foreach bin,$(BINDIRS),$(eval $(call MAKE_BIN,$(bin))))
 
@@ -251,8 +247,9 @@ $(foreach lib,$(LIBDIRS),$(eval $(call MAKE_SHARED_LIB,$(lib))))
 rebuild: clean all
 reshared: clean shared
 
+# cleanup scripts
 clean:
-	@find $(OUTDIR) -type f -exec echo DEL {} \; 2>/dev/null || true
+	@find $(OUTDIR) -type f -not -name *.d -exec echo DEL {} \; 2>/dev/null || true
 	@rm -rf $(OUTDIR)
 
 # Include dependency files
@@ -285,5 +282,35 @@ info:
 	@echo "=== Library dependencies ==="
 	@echo "jaclibc.a depends on: $(call DEPENDENT_OBJS,src)"
 
+# Self-documenting help
+help:
+	@echo
+	@cat /metabuild/VERSION
+	@echo "The Zero-Conf Build System"
+	@echo "0BSD LICENSE - just works!"
+	@echo
+	@echo "USAGE:"
+	@echo
+	@echo "  metabuild <target>"
+	@echo
+	@echo "DISCOVERY:"
+	@echo
+	@echo "  just put source files in src/"
+	@echo "  auto detects C programs and libraries"
+	@echo
+	@echo "BUILDING:"
+	@echo
+	@echo "  build        Build project static by default"
+	@echo "  clean        Remove all build artifacts"
+	@echo "  shared       Build shared objects"
+	@echo "  rebuild      Clean and rebuild"
+	@echo "  reshared     Clean and rebuild shared"
+	@echo
+	@echo "DIAGNOSTICS:"
+	@echo
+	@echo "  info         Show build configuration"
+	@echo "  targets      Show all available targets"
+	@echo
+# EACH *.mk name-help || true
 
 .PHONY: all clean shared submodules rebuild reshared info
