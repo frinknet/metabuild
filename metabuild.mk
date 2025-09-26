@@ -114,19 +114,4 @@ targets:
 	@echo "Available targets:"
 	@$(foreach A,$(ARCHES),$(foreach C,$(COMPS),$(if $($(C).$(A)),echo "	$(C)-$(A)";)))
 
-# Diagnostic info
-info:
-	@echo "PLATFORM: $(PLATFORM)"
-	@echo "CC: $(CC)"
-	@echo "CXX: $(CXX)"
-	@echo "TARGET: $(TARGET)"
-	@echo "EXESUFFIX: $(EXESUFFIX)"
-	@echo "LIBSUFFIX: $(LIBSUFFIX)"
-	@echo "CFLAGS: $(CFLAGS)"
-	@echo "CXXFLAGS: $(CXXFLAGS)"
-	@echo "LDFLAGS: $(LDFLAGS)"
-	@echo "SRCDIRS: $(SRCDIRS)"
-	@echo "BINDIRS: $(BINDIRS)"
-	@echo "LIBDIRS: $(LIBDIRS)"
-
-.PHONY: targets info
+.PHONY: targets
