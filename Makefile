@@ -75,21 +75,53 @@ endef
 
 # Generate object lists for each directory (preserving structure)
 define DEPENDENT_OBJS
-  $(shell D="$(if $(filter .,$(1)),.,$(SRCDIR)/$(1))"; \
+  $(shell D="$(if $(filter .,$(1)),.,$(if $(filter src,$(1)),$(SRCDIR),$(SRCDIR)/$(1)))"; \
     [ -d "$$D" ] && find "$$D" -maxdepth 1 -type f \( -name '*.c' -o -name '*.cc' -o -name '*.cpp' \) | \
-    sed 's|^$(SRCDIR)/||; s|^\./||; s|^|$(OBJDIR)/|; s|\.c$$|.c.o|; s|\.cc$$|.cc.o|; s|\.cpp$$|.cpp.o|' )
+    sed 's|^$(SRCDIR)/||; s|^\./||; s|^|$(OBJDIR)/|; s|\.c$$|.c.o|; s|\.cc$$|.c.o|; s|\.cpp$$|.cpp.o|' )
 endef
 
 # Function to generate clean target names
-define CLEAN_NAME
-$(subst /,_,$(1))
+define CLEAN_BINNAME
+$(subst /,-,$(1))
+endef
+define CLEAN_LIBNAME
+$(strip \
+  $(eval name := $(if $(filter $(PRJ) . src,$(1)),$(PRJ),$(PRJ)$(subst /,,$(1))))\
+  $(if $(filter lib%,$(name)),$(name),lib$(name)))
+endef
+
+
+# Function to find related libraries for an executable
+define FIND_RELATED_LIBS
+$(foreach lib,$(LIBDIRS),$(if $(filter $(word 1,$(subst /, ,$(1))),$(word 1,$(subst /, ,$(lib)))),$(if $(filter .,$(lib)),$(LIBDIR)/$(PRJ).a,$(LIBDIR)/$(call CLEAN_LIBNAME,$(lib)).a)))
+endef
+
+# pattern-generate executable rules (link with related libs)
+define MAKE_BIN
+$(if $(filter . src,$(1)),$(BINDIR)/$(PRJ)$(EXESUFFIX),$(BINDIR)/$(call CLEAN_BINNAME,$(1))$(EXESUFFIX)): $(call DEPENDENT_OBJS,$(1)) $(call FIND_RELATED_LIBS,$(1)) | $(BINDIR)
+	@echo GEN $$@
+	$(if $(filter-out 0,$(call HAS_CXX,$(1))),$$(CXX),$$(CC)) $$(LDFLAGS) -fPIE $(call DEPENDENT_OBJS,$(1)) $(call FIND_RELATED_LIBS,$(1)) -o $$@ $$(LDLIBS)
+endef
+
+# pattern-generate static library rules (default)
+define MAKE_LIB
+$(if $(filter . src,$(1)),$(LIBDIR)/$(PRJ).a,$(LIBDIR)/$(call CLEAN_LIBNAME,$(1)).a): $(call DEPENDENT_OBJS,$(1)) | $(LIBDIR)
+	@echo GEN $$@
+	@$$(AR) rcs $$@ $$^
+endef
+
+# pattern-generate shared library rules (from static library)
+define MAKE_SHARED_LIB
+$(if $(filter . src,$(1)),$(LIBDIR)/$(PRJ)$(LIBSUFFIX),$(LIBDIR)/$(call CLEAN_LIBNAME,$(1))$(LIBSUFFIX)): $(if $(filter . src,$(1)),$(LIBDIR)/$(PRJ).a,$(LIBDIR)/$(call CLEAN_LIBNAME,$(1)).a) | $(LIBDIR)
+	@echo GEN $$@
+	@$$(CC) -shared -nostartfiles -Wl,--whole-archive $$< -Wl,--no-whole-archive -o $$@
 endef
 
 # Get all directories containing C files (excluding templates)
 SRCDIRS := $(shell \
   if [ -d "$(SRCDIR)" ]; then \
     find "$(SRCDIR)" -type f \( -name '*.c' -o -name '*.cpp' -o -name '*.cc' \) -not -path "$(TPLDIR)/*" -print 2>/dev/null | \
-    sed 's|[^/]*$$||; s|/$$||; s|^$(SRCDIR)/\{0,1\}||; s|^$$|.|' | sort -u; \
+    sed 's|/[^/]*$$||' | sort -u; \
   else \
     echo .; \
   fi)
@@ -102,8 +134,7 @@ endif
 
 # Get all directories containing C files
 SRCS := $(foreach dir,$(SRCDIRS),$(shell \
-	find "$(if $(filter .,$(dir)),.,$(SRCDIR)/$(dir))" \
-	-maxdepth 1 -type f \( -name '*.c' -o -name '*.cpp' -o -name '*.cc' \) 2>/dev/null))
+	find "$(dir)" -maxdepth 1 -type f \( -name '*.c' -o -name '*.cpp' -o -name '*.cc' \) 2>/dev/null))
 OBJS := $(SRCS:$(SRCDIR)/%=$(OBJDIR)/%.o)
 DEPS := $(OBJS:.o=.d)
 
@@ -137,9 +168,9 @@ BINOBJS := $(strip $(foreach d,$(BINDIRS),$(call DEPENDENT_OBJS,$(d))))
 LIBOBJS := $(strip $(foreach d,$(LIBDIRS),$(call DEPENDENT_OBJS,$(d))))
 
 # Generate targets with special root handling
-BINS := $(foreach dir,$(BINDIRS),$(if $(filter .,$(dir)),$(BINDIR)/$(PRJ)$(EXESUFFIX),$(BINDIR)/$(call CLEAN_NAME,$(dir))$(EXESUFFIX)))
-LIBS := $(foreach dir,$(LIBDIRS),$(if $(filter .,$(dir)),$(LIBDIR)/$(PRJ).a,$(LIBDIR)/lib$(call CLEAN_NAME,$(dir)).a))
-SHARED_LIBS := $(foreach dir,$(LIBDIRS),$(if $(filter .,$(dir)),$(LIBDIR)/$(PRJ)$(LIBSUFFIX),$(LIBDIR)/lib$(call CLEAN_NAME,$(dir))$(LIBSUFFIX)))
+BINS := $(foreach dir,$(BINDIRS),$(if $(filter . src,$(dir)),$(BINDIR)/$(PRJ)$(EXESUFFIX),$(BINDIR)/$(call CLEAN_BINNAME,$(dir))$(EXESUFFIX)))
+LIBS := $(foreach dir,$(LIBDIRS),$(if $(filter . src,$(dir)),$(LIBDIR)/$(PRJ).a,$(LIBDIR)/lib$(call CLEAN_LIBNAME,$(dir)).a))
+SHARED_LIBS := $(foreach dir,$(LIBDIRS),$(if $(filter . src,$(dir)),$(LIBDIR)/$(PRJ)$(LIBSUFFIX),$(LIBDIR)/lib$(call CLEAN_LIBNAME,$(dir))$(LIBSUFFIX)))
 
 # External libraries (separate from internal code)
 EXT_LIBDIRS := $(shell [ -d "$(EXTDIR)" ] && find "$(EXTDIR)" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sed 's|$(EXTDIR)/||')
@@ -161,39 +192,13 @@ $(LIBDIR)/lib$(1)$(LIBSUFFIX): $(LIBDIR)/lib$(1).a | $(LIBDIR)
 endef
 
 # If root is a library, include both variants
-ROOT_SHARED := $(if $(filter .,$(LIBDIRS)),$(LIBDIR)/$(PRJ)$(LIBSUFFIX))
+ROOTLIB := $(if $(filter . src,$(LIBDIRS)),$(LIBDIR)/$(PRJ)$(LIBSUFFIX))
 
 # Default build (static only)
-all: $(BINS) $(LIBS) $(EXT_STATIC_LIBS) $(ROOT_SHARED)
+all: $(BINS) $(LIBS) $(EXT_STATIC_LIBS) $(ROOTLIB)
 
 # Optional shared libraries
 shared: $(SHARED_LIBS) $(EXT_SHARED_LIBS)
-
-# Function to find related libraries for an executable
-define FIND_RELATED_LIBS
-$(foreach lib,$(LIBDIRS),$(if $(filter $(word 1,$(subst /, ,$(1))),$(word 1,$(subst /, ,$(lib)))),$(if $(filter .,$(lib)),$(LIBDIR)/$(PRJ).a,$(LIBDIR)/lib$(call CLEAN_NAME,$(lib)).a)))
-endef
-
-# pattern-generate executable rules (link with related libs)
-define MAKE_BIN
-$(if $(filter .,$(1)),$(BINDIR)/$(PRJ)$(EXESUFFIX),$(BINDIR)/$(call CLEAN_NAME,$(1))$(EXESUFFIX)): $(call DEPENDENT_OBJS,$(1)) $(call FIND_RELATED_LIBS,$(1)) | $(BINDIR)
-	@echo GEN $$@
-	$(if $(filter-out 0,$(call HAS_CXX,$(1))),$$(CXX),$$(CC)) $$(LDFLAGS) -fPIE $(call DEPENDENT_OBJS,$(1)) $(call FIND_RELATED_LIBS,$(1)) -o $$@ $$(LDLIBS)
-endef
-
-# pattern-generate static library rules (default)
-define MAKE_LIB
-$(if $(filter .,$(1)),$(LIBDIR)/$(PRJ).a,$(LIBDIR)/lib$(call CLEAN_NAME,$(1)).a): $(call DEPENDENT_OBJS,$(1)) | $(LIBDIR)
-	@echo GEN $$@
-	@$$(AR) rcs $$@ $$^
-endef
-
-# pattern-generate shared library rules (from static library)
-define MAKE_SHARED_LIB
-$(if $(filter .,$(1)),$(LIBDIR)/$(PRJ)$(LIBSUFFIX),$(LIBDIR)/lib$(call CLEAN_NAME,$(1))$(LIBSUFFIX)): $(if $(filter .,$(1)),$(LIBDIR)/$(PRJ).a,$(LIBDIR)/lib$(call CLEAN_NAME,$(1)).a) | $(LIBDIR)
-	@echo GEN $$@
-	@$$(CC) -shared -nostartfiles -Wl,--whole-archive $$< -Wl,--no-whole-archive -o $$@
-endef
 
 
 $(foreach bin,$(BINDIRS),$(eval $(call MAKE_BIN,$(bin))))
@@ -253,4 +258,32 @@ clean:
 # Include dependency files
 -include $(DEPS)
 
-.PHONY: all clean shared submodules rebuild reshared
+# Diagnostic info
+info:
+	@echo "PLATFORM: $(PLATFORM)"
+	@echo "CC: $(CC)"
+	@echo "CXX: $(CXX)"
+	@echo "TARGET: $(TARGET)"
+	@echo "EXESUFFIX: $(EXESUFFIX)"
+	@echo "LIBSUFFIX: $(LIBSUFFIX)"
+	@echo "CFLAGS: $(CFLAGS)"
+	@echo "CXXFLAGS: $(CXXFLAGS)"
+	@echo "LDFLAGS: $(LDFLAGS)"
+	@echo "SRCDIRS: $(SRCDIRS)"
+	@echo "BINDIRS: $(BINDIRS)"
+	@echo "LIBDIRS: $(LIBDIRS)"
+	@echo "SOURCES: $(SRCS)"
+	@echo "OBJECTS: $(OBJS)"
+	@echo "BINARIES: $(BINS)"
+	@echo "LIBRARIES: $(LIBS)"
+	@echo "SHARED LIBS: $(SHARED_LIBS)"
+	@echo
+	@echo "=== DEPENDENT_OBJS for 'src' ==="
+	@echo "$(call DEPENDENT_OBJS,src)"
+	@echo "=== Expected compilation rules ==="
+	@$(foreach obj,$(call DEPENDENT_OBJS,src),echo "Rule: $(obj) : $(patsubst $(OBJDIR)/%.o,$(SRCDIR)/%,$(obj))";)
+	@echo "=== Library dependencies ==="
+	@echo "jaclibc.a depends on: $(call DEPENDENT_OBJS,src)"
+
+
+.PHONY: all clean shared submodules rebuild reshared info
