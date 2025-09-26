@@ -116,7 +116,6 @@ targets:
 
 # Diagnostic info
 info:
-	@echo "METABUILD: $(METABUILD)"
 	@echo "PLATFORM: $(PLATFORM)"
 	@echo "CC: $(CC)"
 	@echo "CXX: $(CXX)"
@@ -126,5 +125,8 @@ info:
 	@echo "CFLAGS: $(CFLAGS)"
 	@echo "CXXFLAGS: $(CXXFLAGS)"
 	@echo "LDFLAGS: $(LDFLAGS)"
+	@echo "SRCDIRS: $(SRCDIRS)"
+	@echo "BINDIRS: $(BINDIRS)"
+	@echo "LIBDIRS: $(LIBDIRS)"
 
 .PHONY: targets info
