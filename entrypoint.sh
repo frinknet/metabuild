@@ -26,7 +26,7 @@ cpmaybe() {
 }
 
 case "${1:-}" in
-  cli)
+  shell)
     shift
 
     echo -e "\n\n\e[1;33m  You are now DEEP in the build system... BEWARE OF THE GRUE!!!\e[0m"

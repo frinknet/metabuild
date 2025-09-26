@@ -244,7 +244,7 @@ $(foreach lib,$(LIBDIRS),$(eval $(call MAKE_LIB,$(lib))))
 # Generate shared library rules
 $(foreach lib,$(LIBDIRS),$(eval $(call MAKE_SHARED_LIB,$(lib))))
 
-rebuild: clean all
+rebuild: clean build
 reshared: clean shared
 
 # cleanup scripts
@@ -254,6 +254,11 @@ clean:
 
 # Include dependency files
 -include $(DEPS)
+
+# Show available targets
+targets:
+	@echo "Available targets:"
+	@$(foreach C,$(COMPS),$(foreach A,$(ARCHES),$(if $($(C).$(A)),echo "	$(C)-$(A)";)))
 
 # Diagnostic info
 info:
@@ -285,32 +290,53 @@ info:
 # Self-documenting help
 help:
 	@echo
-	@cat /metabuild/VERSION
-	@echo "The Zero-Conf Build System"
-	@echo "0BSD LICENSE - just works!"
+	@cat /metabuild/VERSION | sed 's|^|  |'
+	@echo "  The Zero-Conf Build System"
+	@echo "  0BSD LICENSE - just works!"
 	@echo
-	@echo "USAGE:"
+	@echo "  USAGE:"
 	@echo
-	@echo "  metabuild <target>"
+	@echo "    metabuild [comp-arch] <target>"
 	@echo
-	@echo "DISCOVERY:"
+	@echo "  Auto detects C binaries and libraries"
+	@echo "  Can run with multiple compilers and"
+	@echo "  architectures. Otherwise leave off."
 	@echo
-	@echo "  just put source files in src/"
-	@echo "  auto detects C programs and libraries"
+	@echo "    src/         put source files here."
+	@echo "    lib/         external dependencies here."
+	@echo "    include/     of course headers go here."
 	@echo
-	@echo "BUILDING:"
+	@echo "  Organize tests by type in single files."
 	@echo
-	@echo "  build        Build project static by default"
-	@echo "  clean        Remove all build artifacts"
-	@echo "  shared       Build shared objects"
-	@echo "  rebuild      Clean and rebuild"
-	@echo "  reshared     Clean and rebuild shared"
+	@echo "    tests/unit/  unit tests"
+	@echo "    tests/load/  load tests"
+	@echo "    tests/case/  usecase tests"
 	@echo
-	@echo "DIAGNOSTICS:"
+	@echo "  Extensible with your own makefiles."
 	@echo
-	@echo "  info         Show build configuration"
-	@echo "  targets      Show all available targets"
+	@echo "    .metabuild/  your *.mk go here"
 	@echo
-# EACH *.mk name-help || true
+	@echo "  BUILDING:"
+	@echo
+	@echo "    build        Build project static by default"
+	@echo "    clean        Remove all build artifacts"
+	@echo "    shared       Build shared objects"
+	@echo "    rebuild      Clean and rebuild"
+	@echo "    reshared     Clean and rebuild shared"
+	@echo
+	@echo "  DIAGNOSTICS:"
+	@echo
+	@echo "    info         Show build configuration"
+	@echo "    arches       List comp-arch possibilities"
+	@echo
+	@echo "  HACKING & EXTEND:"
+	@echo
+	@echo "    init         Add minimum build scripts"
+	@echo "    shell        Open shell in build container"
+	@echo "    extend       Add makefiles maximum hackery"
+	@echo
+	@echo "    SEE:" $(subst ghcr.io,https://github.com,$(REPO))
+	@echo
+	@$(foreach mk,$(MKLOCAL),$(if $(shell grep -l "^.*-help:" $(mk) 2>/dev/null),echo ""; $(MAKE) -s -f $(mk) name-help 2>/dev/null || true;))
 
-.PHONY: all clean shared submodules rebuild reshared info
+.PHONY: build clean shared submodules rebuild reshared info targets

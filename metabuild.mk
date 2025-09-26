@@ -108,10 +108,3 @@ $(foreach A,$(ARCHES),$(foreach C,$(COMPS),$(eval $(C)-$(A): ; @$$(MAKE) all ARC
 ifdef T
 $(foreach A,$(ARCHES),$(foreach C,$(COMPS),$(eval $(C)-$(A)-$(T): ; @$$(MAKE) $(T) ARCH=$(A) COMP=$(C))))
 endif
-
-# Show available targets
-targets:
-	@echo "Available targets:"
-	@$(foreach A,$(ARCHES),$(foreach C,$(COMPS),$(if $($(C).$(A)),echo "	$(C)-$(A)";)))
-
-.PHONY: targets
