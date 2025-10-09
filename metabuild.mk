@@ -2,8 +2,8 @@
 METABUILD := $(shell test -f /.dockerenv && echo 1)
 
 # Default vars
-CC		 ?= clang
-CXX		 ?= clang++
+CC		 := clang
+CXX		 := clang++
 LDFLAGS  ?=
 
 # Variables that change

@@ -298,6 +298,11 @@ help:
 	@echo
 	@echo "    metabuild [comp-arch] <target>"
 	@echo
+	@echo "  EXAMPLES:"
+	@echo
+	@echo "    metabuild build"
+	@echo "    metabuild clang-x64 build"
+	@echo
 	@echo "  Auto detects C binaries and libraries"
 	@echo "  Can run with multiple compilers and"
 	@echo "  architectures. Otherwise leave off."
