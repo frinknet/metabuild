@@ -242,6 +242,7 @@ jobs:
           platforms: linux/amd64
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          no-cache: true
 
       - name: Echo tags
         run: printf '%s\n' "${{ steps.meta.outputs.tags }}"

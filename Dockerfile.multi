@@ -1,5 +1,5 @@
 # multi.Dockerfile - Adds cross-compilation for Windows and macOS
-FROM ghcr.io/frinknet/metabuild:latest AS build
+FROM ghcr.io/frinknet/metabuild-core:latest AS build
 
 # Install dependencies for OSXCross
 RUN apk add --no-cache \
