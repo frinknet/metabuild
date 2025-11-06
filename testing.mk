@@ -115,7 +115,7 @@ test-timing:
 		grep -E "(User time|System time|Elapsed.*real|Maximum resident set size)"
 
 # Profile test suite performance
-test-timing:
+test-profile:
 	@echo "Profiling test suite..."
 	@$(TEST_PERF) $(MAKE) -s test
 
