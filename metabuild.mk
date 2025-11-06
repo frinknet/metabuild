@@ -1,5 +1,5 @@
 # metabuild.mk - (c) 2025 FRINKnet & Friends - 0BSD
-METABUILDENV := $(shell test -f /.metabuildenv && echo 1)
+METABUILD := $(shell test -f /metabuild && echo 1)
 
 # Makefile extensions
 MKLOCAL := $(filter-out $(MKUSER),$(wildcard $(CURDIR)/.metabuild/*.mk))
@@ -18,7 +18,7 @@ ARCHES ?= x86 x64 arm arm64 wasm wasi
 COMPS  ?= clang gcc tcc xcc osx win
 
 # Force Docker (fixed escaping)
-ifeq ($(METABUILDENV),)
+ifeq ($(METABUILD),)
 .DEFAULT_GOAL := .metabuild
 .metabuild:
 	@docker image inspect $(IMAGE) >/dev/null 2>&1 || \
