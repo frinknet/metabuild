@@ -1,12 +1,33 @@
 # templates.mk - (c) 2025 FRINKnet & Friends - 0BSD
 
-# Extract positional arguments (new [tpl] [name])
-new:
-	@$(eval tpl := $(word 2, $(MAKECMDGOALS)))
-	@$(eval name := $(word 3, $(MAKECMDGOALS)))
-	@test -n "$(tpl)" || (echo "Usage: make new [template] [name]"; exit 1)
-	@test -n "$(name)" || (echo "Usage: make new [template] [name]"; exit 1)
-	@test -d "$(TPLDIR)/$(tpl)" || (echo "Template $(tpl) not found"; exit 1)
+# Template usage
+template-usage:
+	@echo "  TEMPLATES:"
+	@echo
+	@echo "    new [template] [name]  Create from template"
+	@echo "    templates              List available templates"
+	@echo
+
+# Template info
+template-info:
+	@$(if $(wildcard $(TPLDIR)),echo -e "\n=== AVAILABLE TEMPLATES ===n";)
+	@find $(TPLDIR) -maxdepth 1 -type d -not -path $(TPLDIR) -printf "	%f\n" 2>/dev/null || true
+
+# Template missing
+template-missing:
+	@echo "  Template not found."
+
+#show avialable templates
+templates: respond template-info
+
+# New module from template
+new-command:
+	# Extract positional arguments (new [tpl] [name])
+	@$(eval tpl := $(word 2, $(MKCOMMAND)))
+	@$(eval name := $(word 3, $(MKCOMMAND)))
+	@test -n "$(tpl)" || ($(MAKE) respond template-usage; exit 1)
+	@test -n "$(name)" || ($(MAKE) respond template-usage; exit 1)
+	@test -d "$(TPLDIR)/$(tpl)" ||($(MAKE) respond template-missing; exit 1)
 	@mkdir -p "$(SRCDIR)/$(name)"
 	@echo "Creating $(SRCDIR)/$(name) from template $(tpl)..."
 	@for file in $(TPLDIR)/$(tpl)/*; do \
@@ -16,15 +37,6 @@ new:
 			"$$file" > "$$target"; \
 		echo "	$$target"; \
 	done
+	@exit 0
 
-template-list:
-	@echo "Available templates:"
-	@find $(TPLDIR) -maxdepth 1 -type d -not -path $(TPLDIR) -printf "	%f\n" 2>/dev/null || true
-
-# Suppress unknown targets when using 'new' command
-ifeq ($(word 1, $(MAKECMDGOALS)),new)
-%:
-	@:
-endif
-
-.PHONY: template-list new
+.PHONY: template-info template-usage template-missing templates new-command

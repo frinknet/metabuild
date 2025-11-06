@@ -1,14 +1,38 @@
-# tests.mk - (c) 2025 FRINKnet & Friends - 0BSD
+# testing.mk - (c) 2025 FRINKnet & Friends - 0BSD
 
 # Portability detection
 TEST_PARALLEL := $(shell nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
 TEST_TIMER := $(shell which gtime 2>/dev/null || which time 2>/dev/null || echo time)
+TEST_PERF := $(shell which perf 2>/dev/null || echo)
 TEST_SOURCES := $(shell find $(TESTDIR) -maxdepth 1 -type f -name "*.c" 2>/dev/null)
 TEST_OBJECTS := $(TEST_SOURCES:$(TESTDIR)/%.c=$(OUTDIR)/test/%.o)
 
 $(OUTDIR)/test/%.o: $(TESTDIR)/%.c | $(OUTDIR)/test/
 	@echo "Building test infrastructure: $*"
 	@$(CC) $(CFLAGS) -I$(TESTDIR) -c $< -o $@
+
+# Testing info
+test-info:
+	@$(if $(TEST_TYPES),echo -e "\n=== AVAILABLE TESTS ===\n";)
+	@$(foreach type,$(TEST_TYPES),echo "$(type)-tests: $(shell find $(TESTDIR)/$(type) -maxdepth 1 -name "*.c" -exec basename {} .c \; | sort | tr '\n' ' ')";)
+
+# Testing usage
+test-usage:
+	@echo "  TESTING:"
+	@echo
+	@echo "    test             Run all tests"
+	#todo show different types of tests
+	#echo "    xxxx-test        Run xxx tests"
+	#echo "    xxxx-test-[name] Run xxx tests"
+	@echo "    tests            Show list of tests"
+	@echo
+
+# Testing missing
+test-missing:
+	@echo "  Template not found."
+
+# List tests
+tests: respond test-info
 
 # Test targets with pattern matching
 test:
@@ -37,19 +61,19 @@ $(1)-test-%:
 	@$$(MAKE) -s test-only TYPE=$(1) TEST=$$*
 
 $(1)-memory-%:
-	@echo "Memory profiling $(1)/$$*..."
-	@mkdir -p $$(OUTDIR)/test
-	@$$(CC) $$(CFLAGS) -fsanitize=address -I$$(TESTDIR) $$(TESTDIR)/$(1)/$$*.c $$(TEST_OBJECTS) $$(filter %.a,$$(LIBS)) -o $$(OUTDIR)/test/$(1)-$$*-mem $$(LDFLAGS)
-	@$$(OUTDIR)/test/$(1)-$$*-mem 2>&1 | grep -E "(ERROR|SUMMARY|leaked)" || echo "No memory issues detected"
+	@echo "memory profiling $(1)/$$*..."
+	@mkdir -p $$(outdir)/test
+	@$$(cc) $$(cflags) -fsanitize=address -i$$(testdir) $$(testdir)/$(1)/$$*.c $$(test_objects) $$(filter %.a,$$(libs)) -o $$(outdir)/test/$(1)-$$*-mem $$(ldflags)
+	@$$(outdir)/test/$(1)-$$*-mem 2>&1 | grep -e "(error|summary|leaked)" || echo "no memory issues detected"
 
 $(1)-timing-%:
 	@printf "Timing $(1)/$$*: "
-	@$$(TEST_TIMER) $$(MAKE) -s test-only TYPE=$(1) TEST=$$* 2>&1 | tail -1
+	@$$(TEST_TIMER) $$(MAKE) -s test-line TYPE=$(1) TEST=$$*  | \
+		grep -E "(User time|System time|Elapsed|resident)" || true
 
 $(1)-profile-%:
 	@echo "Profiling $(1)/$$*..."
-	@$$(TEST_TIMER) $$(MAKE) -s test-only TYPE=$(1) TEST=$$* 2>&1 | \
-		grep -E "(User time|System time|Elapsed.*real|Maximum resident set size)"
+	@$$(TEST_PERF) $$(MAKE) -s test-line TYPE=$(1) TEST=$$*
 endef
 
 # Generate all patterns for each discovered test type
@@ -60,16 +84,14 @@ test-only: $(LIBS)
 	@test -n "$(TYPE)" || (echo "TYPE not specified"; exit 1)
 	@test -n "$(TEST)" || (echo "TEST not specified"; exit 1)
 	@test -f "$(TESTDIR)/$(TYPE)/$(TEST).c" || (echo "Test $(TESTDIR)/$(TYPE)/$(TEST).c not found"; exit 1)
-	@echo "→ Running $(TYPE)/$(TEST)"
 	@mkdir -p $(OUTDIR)/test
-	@echo $(CC) $(CFLAGS) -I$(TESTDIR) $(TESTDIR)/$(TYPE)/$(TEST).c $(TEST_OBJECTS) $(filter %.a,$(LIBS)) -o $(OUTDIR)/test/$(TYPE)-$(TEST) $(LDFLAGS)
 	@$(CC) $(CFLAGS) -I$(TESTDIR) $(TESTDIR)/$(TYPE)/$(TEST).c $(TEST_OBJECTS) $(LIBS) -o $(OUTDIR)/test/$(TYPE)-$(TEST) $(LDFLAGS)
 	@$(OUTDIR)/test/$(TYPE)-$(TEST)
 
 # Single line response with status
 test-line:
 	@printf "Testing [$(TEST)]..."
-	@if $(MAKE) -s test-only TYPE=$(TYPE) TEST=$(TEST) 2>&1 >/dev/null; then \
+	@if $(MAKE) -s test-only TYPE=$(TYPE) TEST=$(TEST) >/dev/null 2>&1; then \
 		printf "\r%-30s ✓ passed\n" "$(TEST)"; \
 	else \
 		printf "\r%-30s ✗ failed\n" "$(TEST)"; \
@@ -85,16 +107,17 @@ test-each:
 		$(MAKE) -s test-line TYPE=$(TYPE) TEST=$$test; \
 	done
 
-# List available tests
-test-list:
-	@echo "Available tests:"
-	@find $(TESTDIR) -name "*.c" | sed 's|$(TESTDIR)/||; s|\.c$$||' | sort
-
 # Profile test suite performance
-test-profile:
-	@echo "Profiling test suite..."
+test-timing:
+	@echo "Timing test suite..."
+	@printf "Timing $(1)/$$*: "
 	@$(TEST_TIMER) $(MAKE) -s test 2>&1 | \
 		grep -E "(User time|System time|Elapsed.*real|Maximum resident set size)"
+
+# Profile test suite performance
+test-timing:
+	@echo "Profiling test suite..."
+	@$(TEST_PERF) $(MAKE) -s test
 
 # Suppress pattern matching for test targets
 ifneq (,$(filter %-test %-test-% %-memory-% %-timing-% %-profile-%, $(MAKECMDGOALS)))

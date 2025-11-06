@@ -70,8 +70,6 @@ jobs:
           echo "Core build: $(grep 'core=' $GITHUB_OUTPUT | cut -d= -f2)"
           echo "Multi build: $(grep 'multi=' $GITHUB_OUTPUT | cut -d= -f2)"
 
-
-
   # Build core base image only if relevant files changed
   build-core:
     needs: find-changes

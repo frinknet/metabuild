@@ -57,9 +57,9 @@ case "${1:-}" in
     ;;
   *)
     if [[ -f Makefile ]]; then
-      exec make "$@"
+      exec make -s "$@" || make failed
     else
-      exec make -f /metabuild/Makefile "$@"
+      exec make -s -f /metabuild/Makefile "$@" || make failed
     fi
     ;;
 esac

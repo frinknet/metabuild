@@ -1,0 +1,104 @@
+# information.mk - (c) 2025 FRINKnet & Friends - 0BSD
+
+# CLI heading
+respond:
+	@echo
+	@cat /metabuild/VERSION | sed 's|^|  |'
+	@echo "  The Zero-Conf Build System"
+	@echo "  0BSD LICENSE - just works!"
+	@echo
+
+# Self-documenting help
+usage:
+	@echo "  USAGE:"
+	@echo
+	@echo "    metabuild [comp-arch] <target>"
+	@echo
+	@echo "  EXAMPLES:"
+	@echo
+	@echo "    metabuild build"
+	@echo "    metabuild clang-x64 build"
+	@echo
+	@echo "  Auto detects C binaries and libraries"
+	@echo "  Can run with multiple compilers and"
+	@echo "  architectures. Otherwise leave off."
+	@echo
+	@echo "    src/         put source files here."
+	@echo "    lib/         external dependencies here."
+	@echo "    include/     of course headers go here."
+	@echo
+	@echo "  Organize tests by type in single files."
+	@echo
+	@echo "    tests/unit/  unit tests"
+	@echo "    tests/load/  load tests"
+	@echo "    tests/case/  usecase tests"
+	@echo
+	@echo "  Extend the system easily..."
+	@echo
+	@echo "    .metabuild/     your *.mk go here"
+	@echo "    src/templates/  add template examples"
+	@echo "    syslib/         use a different syslib"
+	@echo
+	@echo "  BUILDING:"
+	@echo
+	@echo "    info         Show auto-detected build system"
+	@echo "    build        Build project static by default"
+	@echo "    clean        Remove all build artifacts"
+	@echo "    shared       Build shared objects"
+	@echo "    rebuild      Clean and rebuild"
+	@echo "    reshared     Clean and rebuild shared"
+	@echo
+	@$(foreach mk,$(MKLOCAL),$(foreach target,$(shell grep -o "^[a-zA-Z0-9_-]*-usage:" $(mk) 2>/dev/null | sed 's/:$$//'),$(MAKE) -s -f $(mk) $(target);))
+	@echo "  HACKING & EXTEND:"
+	@echo
+	@echo "    init         Add minimum build scripts"
+	@echo "    shell        Open shell in build container"
+	@echo "    extend       Add makefiles maximum hackery"
+	@echo
+	@echo "    SEE:" $(subst ghcr.io,https://github.com,$(REPO))
+	@echo
+
+# show nice failure
+failed:
+	@echo "  command failed"
+
+# show nice missing
+missing:
+	@echo "  command does not exist"
+
+# Diagnostic info
+info: respond
+	@echo "  PROJECT: $(PRJ)"
+	@echo "  PLATFORM: $(PLATFORM)"
+	@echo "  TARGET: $(TARGET)"
+	@echo
+	@echo "  CC: $(CC)"
+	@echo "  CXX: $(CXX)"
+	@echo "  CFLAGS: $(CFLAGS)"
+	@echo "  CXXFLAGS: $(CXXFLAGS)"
+	@echo "  LDFLAGS: $(LDFLAGS)"
+	@echo
+	@$(if $(SRCDIRS),echo "  SRCDIRS: $(SRCDIRS)";)
+	@$(if $(BINDIRS),echo "  BINDIRS: $(BINDIRS)";)
+	@$(if $(LIBDIRS),echo "  LIBDIRS: $(LIBDIRS)";)
+	@echo
+	@$(if $(SRCS),echo "  SOURCES: $(SRCS)";)
+	@$(if $(OBJS),echo "  OBJECTS: $(OBJS)";)
+	@$(if $(BINS),echo "  BINARIES: $(BINS)";)
+	@$(if $(LIBS),echo "  LIBRARIES: $(LIBS)";)
+	@echo
+	@$(if $(BINDIRS),echo -e "\n=== BINARY DEPENDENCIES ===\n";)
+	@$(foreach bin,$(BINDIRS),echo "$(call CLEAN_BINNAME,$(bin)) depends on: $(call DEPENDENT_OBJS,$(bin)) + $(call FIND_RELATED_LIBS,$(bin))";)
+	@$(if $(LIBDIRS),echo -e "\n=== LIBRARY DEPENDENCIES ===\n";)
+	@$(foreach lib,$(LIBDIRS),echo "$(call CLEAN_LIBNAME,$(lib)).a depends on: $(call DEPENDENT_OBJS,$(lib))";)
+	@$(foreach mk,$(MKLOCAL),$(foreach target,$(shell grep -o "^[a-zA-Z0-9_-]*-info:" $(mk) 2>/dev/null | sed 's/:$$//'),$(MAKE) -s -f $(mk) $(target);))
+	@$(if $(COMPS),echo -e "\n=== AVAILABLE COMPILERS ===\n";)
+	@$(foreach C,$(COMPS),echo "$(C): $(foreach A,$(ARCHES),$(if $($(C).$(A)),$(C)-$(A)))";)
+
+# Help dispatcher
+help-command:
+	@$(eval T := $(word 2, $(MKCOMMAND)))
+	@$(if $(T),$(MAKE) respond $(T)-usage 2>/dev/null || $(MAKE) respond missing,$(MAKE) respond usage)
+	@exit 0
+
+.PHONY: respond usage failed missing info help-command
