@@ -25,6 +25,9 @@ cpmaybe() {
   fi
 }
 
+metabuild() {
+}
+
 case "${1:-}" in
   shell)
     shift
@@ -57,9 +60,11 @@ case "${1:-}" in
     ;;
   *)
     if [[ -f Makefile ]]; then
-      exec make -s "$@" || make failed
+      MKFILE=Makefile
     else
-      exec make -s -f /metabuild/Makefile "$@" || make failed
+      MKFILE=/metabuild/Makefile
     fi
+
+    make -s -f $MKFILE "$@" || make -f $MKFILE failed
     ;;
 esac

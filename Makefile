@@ -1,72 +1,32 @@
-# METABUILD - (c) 2025 FRINKnet & Friends - 0BSD
+# FINALLY!!!! An extensible Makefile that JUST WORKS!!!
 
-# Project configuration
-PRJ ?= $(shell basename $(CURDIR))
-VER := $(shell git describe --tags --abbrev=0 2>/dev/null || git rev-parse --abbrev-ref HEAD 2>/dev/null || echo dev)
+CC       := clang
+CXX      := clang++
+CFLAGS   ?= -Wno-unknown-warning-option
+CXFLAGS  ?=
+LDFLAGS  ?=
+MKGOAL   := help
 
-# Directory structure
-EXTDIR  := lib
+OUTDIR  := out
 SYSDIR  := syslib
-INCDIR  := include
-SRCDIR  := src
-TPLDIR  := $(SRCDIR)/templates
-DOCDIR  := docs
-WEBDIR  := web
+EXTDIR  := lib libs vendor src/vendor
+INCDIR  := include inc headers src/incs src/include src/headers
+SRCDIR  := src source code srccode .
+TPLDIR  := templates src/templates src/tpl tpl
+SPLDIR  := examples demos demo samples src/examples src/demos experiments
+DOCDIR  := docs doc manual documentation
+WEBDIR  := web webroot wwwroot public static
+CHKDIR  := tests test testing testcases check checks
+NOTSRC := EXTDIR SYSDIR TPLDIR SPLDIR DOCDIR WEBDIR CHKDIR
 
-# Output Directories
-OUTDIR  := out$(if $(TARGET),/$(TARGET))
-OBJDIR  := $(OUTDIR)/obj
-LIBDIR  := $(OUTDIR)/lib
-BINDIR  := $(OUTDIR)/bin
+REPO   ?= ghcr.io/frinknet/metabuild
+IMAGE  ?= metabuild
+ARCHES ?= x86 x64 arm arm64 wasm wasi
+COMPS  ?= clang gcc tcc xcc osx win
 
-# Test directories
-TESTDIR	 := tests
-UNITDIR	 := $(TESTDIR)/unit
-CASEDIR	 := $(TESTDIR)/case
-LOADDIR  := $(TESTDIR)/load
-
-# Add SYSDIR only if it exists
-ifneq ($(wildcard $(SYSDIR)),)
-	CFLAGS	 += -isystem $(SYSDIR)
-	CXXFLAGS += -isystem $(SYSDIR)
-	LDFLAGS  += -static
+ifeq (,$(wildcard $(CURDIR)/.metabuild/metabuild.mk /metabuild/metabuild.mk))
+ $(shell mkdir -p $(CURDIR)/.metabuild && curl -fsSL $(subst ghcr.io,github.com,$(REPO))/raw/main/metabuild.mk -o $(CURDIR)/.metabuild/metabuild.mk)
 endif
 
-# Compiler flags using the directory structure
-CFLAGS	 += -I$(INCDIR) -I$(EXTDIR)
-CXXFLAGS += -I$(INCDIR) -I$(EXTDIR)
-
-# Smart detection: add each library subdirectory that contains headers
-EXT_HEADER_DIRS = $(shell \
-	[ -d "$(EXTDIR)" ] && \
-	find "$(EXTDIR)" -mindepth 1 -type d -exec test -e "{}/*.h" \; \
-	-print 2>/dev/null)
-
-# Set bassic flags for compiler and linker
-CFLAGS += $(addprefix -I,$(EXT_HEADER_DIRS)) -fPIC -MMD -MP
-CXXFLAGS += $(addprefix -I,$(EXT_HEADER_DIRS)) -fPIC -MMD -MP
-LDFLAGS  +=
-LDLIBS	 ?=
-
-# Reassign SRCDIR if sources are in root
-ifeq ($(strip $(SRCDIRS)),.)
-  SRCDIR := .
-  TPLDIR := templates
-endif
-
-# Default target
-.DEFAULT_GOAL := help
-
-# Check for USER metabuild.mk
-MKUSER := $(wildcard $(CURDIR)/.metabuild/metabuild.mk)
-MKROOT := $(wildcard /metabuild/metabuild.mk)
-
-# Set to USER if it exists
-ifeq ($(MKUSER),)
-  MKBUILD := $(MKROOT)
-else
-  MKBUILD := $(MKUSER)
-endif
-
-# Let the magic begin
-include $(MKBUILD)
+# HOW?? Oh the secret is out... WE USE METABUILD!!! - (c) 2025 FRINKnet & Friends - 0BSD
+include $(firstword $(wildcard $(CURDIR)/.metabuild/metabuild.mk /metabuild/metabuild.mk))

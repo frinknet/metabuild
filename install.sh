@@ -9,7 +9,8 @@ VER="${1:-latest}"
 mkdir -p "$PREFIX"
 
 case ":$PATH:" in
-  *:"$PREFIX":*) ;;
+  *:"$PREFIX") ;;
+  "$PREFIX":*) ;;
   *) printf '\nexport PATH="%s:$PATH"\n' "$PREFIX" >> "$HOME/.bashrc" || true ;;
 esac
 

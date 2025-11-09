@@ -1,15 +1,16 @@
 # metabuild.mk - (c) 2025 FRINKnet & Friends - 0BSD
-METABUILD := $(shell test -f /metabuild && echo 1)
+METABUILD := $(shell test -d /metabuild || echo local)
+
+# Project configuration
+PRJ ?= $(shell basename $(CURDIR))
+VER ?= $(shell git describe --tags --abbrev=0 2>/dev/null || git rev-parse --abbrev-ref HEAD 2>/dev/null || echo dev)
 
 # Makefile extensions
+MKGOAL  ?= help
+MKUSER  := $(CURDIR)/.metabuild/metabuild.mk
+MKROOT  := /metabuild/metabuild.mk
 MKLOCAL := $(filter-out $(MKUSER),$(wildcard $(CURDIR)/.metabuild/*.mk))
-MKCORE := $(filter-out $(MKROOT) $(addprefix /metabuild/,$(notdir $(MKLOCAL))),$(wildcard /metabuild/*.mk))
-
-
-# Default vars
-CC		 := clang
-CXX		 := clang++
-LDFLAGS  ?=
+MKCORE := $(filter-out $(MKROOT) $(addprefix /metabuild/,$(notdir $(MKUSER) $(MKLOCAL))),$(wildcard /metabuild/*.mk))
 
 # Variables that change
 REPO   ?= ghcr.io/frinknet/metabuild
@@ -18,18 +19,73 @@ ARCHES ?= x86 x64 arm arm64 wasm wasi
 COMPS  ?= clang gcc tcc xcc osx win
 
 # Force Docker (fixed escaping)
-ifeq ($(METABUILD),)
-.DEFAULT_GOAL := .metabuild
-.metabuild:
-	@docker image inspect $(IMAGE) >/dev/null 2>&1 || \
-	  (docker pull "$(REPO):latest" || docker build -t "$(IMAGE)" .)
-	@echo "⇢ jumping into $(IMAGE)…"
+ifeq ($(METABUILD),local)
+.DEFAULT_GOAL := metabuild.docker
+metabuild.docker:
+	@docker image inspect $(IMAGE) >/dev/null 2>&1 || (docker pull "$(REPO):latest" || docker build -t "$(IMAGE)" .)
+	@echo "Jumping into ⇢  $(IMAGE)…"
 	@exec docker run --rm -it \
 		-v "$(CURDIR):/work" \
-		$(IMAGE) make -f $(firstword $(MAKEFILE_LIST)) $(if $(MAKECMDGOALS),$(MAKECMDGOALS),build)
+		$(IMAGE) $(firstword $(MAKEFILE_LIST)) $(if $(MAKECMDGOALS),$(MAKECMDGOALS),$(MKGOAL))
 
-%: .metabuild;
+%: metabuild.docker
+	@:
+
+.PHONY: metabuild.docker
+else
+
+local:
+	@echo $(METABUILD)
+
+.PHONY: local
 endif
+
+ifeq (1,0)
+
+# Setup directory structure
+getdir = $(firstword $(foreach d,$(1),$(if $(wildcard $(d)),$(d))))
+EXTDIR  := $(call getdir,$(EXTDIR))
+SYSDIR  := $(call getdir,$(SYSDIR))
+INCDIR  := $(call getdir,$(INCDIR))
+SRCDIR  := $(call getdir,$(SRCDIR))
+TPLDIR  := $(call getdir,$(TPLDIR))
+SPLDIR  := $(call getdir,$(SPLDIR))
+DOCDIR  := $(call getdir,$(DOCDIR))
+WEBDIR  := $(call getdir,$(WEBDIR))
+CHKDIR	:= $(call getdir,$(CHKDIR))
+
+# Output Directories
+OUTDIR  := $(OUTDIR)$(if $(TARGET),/$(TARGET))
+OBJDIR  := $(OUTDIR)/obj
+LIBDIR  := $(OUTDIR)/lib
+BINDIR  := $(OUTDIR)/bin
+
+# Exclude fron source searches
+NOTSRCS := $(foreach var,$(NOTSRC),$($(var)))
+NOTFIND := $(foreach dir,$(NOTSRC),-not -path "$(dir)/*")
+
+# Add SYSDIR only if it exists
+ifneq ($(wildcard $(SYSDIR)),)
+	CFLAGS	 += -isystem $(SYSDIR)
+	CXXFLAGS += -isystem $(SYSDIR)
+	LDFLAGS  += -static
+endif
+
+# Compiler flags using the directory structure
+CFLAGS	 += -I$(INCDIR) -I$(EXTDIR)
+CXXFLAGS += -I$(INCDIR) -I$(EXTDIR)
+
+# Smart detection: add each library subdirectory that contains headers
+EXT_HEADER_DIRS = $(shell \
+	[ -d "$(EXTDIR)" ] && \
+	find "$(EXTDIR)" -mindepth 1 -type d -exec test -e "{}/*.h" \; \
+	-print 2>/dev/null)
+
+# Set bassic flags for compiler and linker
+CFLAGS += $(addprefix -I,$(EXT_HEADER_DIRS)) -fPIC -MMD -MP
+CXXFLAGS += $(addprefix -I,$(EXT_HEADER_DIRS)) -fPIC -MMD -MP
+LDFLAGS  +=
+LDLIBS	 +=
 
 # Get commands
 COMMANDS := $(shell grep -h "^[a-zA-Z0-9_-]*-command:" $(MKLOCAL) $(MKCORE) 2>/dev/null | sed 's/:$$//; s/-command$$//' | sort -u)
@@ -146,73 +202,93 @@ endef
 
 # Function to check if directory contains main()
 define HAS_MAIN
-$(shell D="$(if $(filter .,$(1)),$(SRCDIR),$(SRCDIR)/$(1))"; \
+$(shell D="$(1)"; \
 	[ -d "$$D" ] && find "$$D" -maxdepth 1 \( -name '*.c' -o -name '*.cpp' -o -name '*.cc' \) -exec awk '/int main *\(.*\)/ { if (/\{/ || getline && /^ *\{/) print FILENAME; exit }' {} \; 2>/dev/null | wc -l || echo 0)
 endef
 
 # Generate object lists for each directory (preserving structure)
 define DEPENDENT_OBJS
-  $(shell D="$(if $(filter .,$(1)),$(SRCDIR),$(SRCDIR)/$(patsubst $(SRCDIR)/%,%,$(1)))"; \
+  $(shell D="$(1)"; \
     [ -d "$$D" ] && find "$$D" -maxdepth 1 -type f \( -name '*.c' -o -name '*.cc' -o -name '*.cpp' \) | \
     sed 's|^$(SRCDIR)/||; s|^\./||; s|^|$(OBJDIR)/|; s|\.c$$|.c.o|; s|\.cc$$|.c.o|; s|\.cpp$$|.cpp.o|' )
 endef
 
-# Function to generate clean target names
+# Function to generate clean target names for binaries
+define CLEAN_BINNAME
+$(strip \
+	$(eval stripped := $(patsubst src/%,%,$(patsubst src,.,$(1))))\
+	$(eval subdir := $(if $(filter .,$(stripped)),,$(subst /,-,$(stripped))))\
+	$(if $(filter .,$(stripped)),$(PRJ),$(PRJ)$(if $(subdir),-$(subdir))))$(EXESUFFIX)
+endef
+
+# Function to generate clean target names for libraries
 define CLEAN_LIBNAME
 $(strip \
-  $(eval stripped := $(patsubst src/%,%,$(patsubst src,.,$(1))))\
+  $(eval stripped := $(patsubst $(SRCDIR)/%,%,$(patsubst $(SRCDIR),.,$(1))))\
   $(eval subdir := $(if $(filter .,$(stripped)),,$(subst /,-,$(stripped))))\
-  $(if $(filter .,$(stripped)),$(PRJ),$(PRJ)$(if $(subdir),-$(subdir))))
+  $(if $(filter .,$(1)),$(PRJ),lib$(PRJ)$(if $(subdir),-$(subdir))).a)
 endef
 
 # Function to find related libraries for an executable
-define FIND_RELATED_LIBS
-$(foreach lib,$(LIBDIRS),$(if $(filter $(word 1,$(subst /,,$(1))),$(word 1,$(subst /,,$(lib)))),$(if $(filter .,$(lib)),$(LIBDIR)/$(PRJ).a,$(LIBDIR)/$(call CLEAN_LIBNAME,$(lib)).a)))
+define RELATED_LIBS
+$(foreach child,$(filter $(LIBDIRS),$(shell find $(1) -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sed 's|^\./||')),\
+  $(LIBDIR)/$(call CLEAN_LIBNAME,$(child)) )
 endef
 
 # pattern-generate executable rules (link with related libs)
 define MAKE_BIN
-$(if $(filter . src,$(1)),$(BINDIR)/$(PRJ)$(EXESUFFIX),$(BINDIR)/$(call CLEAN_BINNAME,$(1))$(EXESUFFIX)): $(call DEPENDENT_OBJS,$(1)) $(call FIND_RELATED_LIBS,$(1)) | $(BINDIR)
+$(BINDIR)/$(call CLEAN_BINNAME,$(1)): $(call DEPENDENT_OBJS,$(1)) $(call RELATED_LIBS,$(1)) | $(BINDIR)
 	@echo GEN $$@
-	$(if $(filter-out 0,$(call HAS_CXX,$(1))),$$(CXX),$$(CC)) $$(LDFLAGS) -fPIE $(call DEPENDENT_OBJS,$(1)) $(call FIND_RELATED_LIBS,$(1)) -o $$@ $$(LDLIBS)
+	$(if $(filter-out 0,$(call HAS_CXX,$(1))),$$(CXX),$$(CC)) $$(LDFLAGS) -fPIE $(call DEPENDENT_OBJS,$(1)) $(call RELATED_LIBS,$(1)) -o $$@ $$(LDLIBS)
 endef
 
 # pattern-generate static library rules (default)
 define MAKE_LIB
-$(if $(filter . src,$(1)),$(LIBDIR)/$(PRJ).a,$(LIBDIR)/$(call CLEAN_LIBNAME,$(1)).a): $(call DEPENDENT_OBJS,$(1)) | $(LIBDIR)
+$(LIBDIR)/$(call CLEAN_LIBNAME,$(1)): $(call DEPENDENT_OBJS,$(1)) | $(LIBDIR)
 	@echo GEN $$@
 	@$$(AR) rcs $$@ $$^
 endef
 
 # pattern-generate shared library rules (from static library)
 define MAKE_SHARED_LIB
-$(if $(filter . src,$(1)),$(LIBDIR)/$(PRJ)$(LIBSUFFIX),$(LIBDIR)/$(call CLEAN_LIBNAME,$(1))$(LIBSUFFIX)): $(if $(filter . src,$(1)),$(LIBDIR)/$(PRJ).a,$(LIBDIR)/$(call CLEAN_LIBNAME,$(1)).a) | $(LIBDIR)
+$(patsubst %.a,%$(LIBSUFFIX),$(LIBDIR)/$(call CLEAN_LIBNAME,$(1))): $(LIBDIR)/$(call CLEAN_LIBNAME,$(1)) | $(LIBDIR)
 	@echo GEN $$@
 	@$$(CC) -shared -nostartfiles -Wl,--whole-archive $$< -Wl,--no-whole-archive -o $$@
 endef
 
-#### begin METABUILD wizardtry
+# Build external libraries as separate targets
+define MAKE_EXTERNAL_LIB
+$(LIBDIR)/lib$(1).a: $(shell find $(EXTDIR)/$(1) \( -name '*.c' -o -name '*.cpp' -o -name '*.cc' \) 2>/dev/null | sed 's|$(EXTDIR)/|$(OBJDIR)/lib/|; s|\.\(c\|cpp\|cc\)$$|.\1.o|') | $(LIBDIR)
+	@echo GEN $$@
+	@$$(AR) rcs $$@ $$^
 
-# Get all directories containing C files (excluding templates)
+$(LIBDIR)/lib$(1)$(LIBSUFFIX): $(LIBDIR)/lib$(1).a | $(LIBDIR)
+	@echo GEN $$@
+	@$$(CC) -shared -nostartfiles -Wl,--whole-archive $$< -Wl,--no-whole-archive -o $$@
+endef
+
+# Get all directories containing C files (excluding NOTSRC)
 SRCDIRS := $(shell \
-  if [ -d "$(SRCDIR)" ]; then \
-    find "$(SRCDIR)" -type f \( -name '*.c' -o -name '*.cpp' -o -name '*.cc' \) -not -path "$(TPLDIR)/*" -print 2>/dev/null | \
-    sed 's|/[^/]*$$||' | sort -u; \
-  else \
-    echo .; \
-  fi)
+  { find "$(SRCDIR)" -type f \( -name '*.c' -o -name '*.cpp' -o -name '*.cc' \) \
+    $(NOTFIND) -print 2>/dev/null; \
+    find "." -maxdepth 1 -type f \( -name '*.c' -o -name '*.cpp' -o -name '*.cc' \) \
+    $(NOTFIND) -print 2>/dev/null; \
+  } | sed 's|/[^/]*$$||; s|^\./$$|.|' | sort -u)
+
 # Get all directories containing C files
 SRCS := $(foreach dir,$(SRCDIRS),$(shell \
-	find "$(dir)" -maxdepth 1 -type f \( -name '*.c' -o -name '*.cpp' -o -name '*.cc' \) 2>/dev/null))
-OBJS := $(SRCS:$(SRCDIR)/%=$(OBJDIR)/%.o)
+	find "$(dir)" -maxdepth 1 -type f \( -name '*.c' -o -name '*.cpp' -o -name '*.cc' \) 2>/dev/null | \
+	sed 's|^\./||' ))
+OBJS := $(addprefix $(OBJDIR)/,$(SRCS:.c=.c.o))
 DEPS := $(OBJS:.o=.d)
 
 # Library sources (separate from main sources)
 EXTSRCS := $(shell [ -d "$(EXTDIR)" ] && find "$(EXTDIR)" -type f \( -name '*.c' -o -name '*.cpp' -o -name '*.cc' \) 2>/dev/null)
 EXTOBJS := $(EXTSRCS:$(EXTDIR)/%=$(OBJDIR)/lib/%.o)
 
--include $(MKLOCAL)
--include $(MKCORE)
+# Include paths
+#include $(MKLOCAL)
+#include $(MKCORE)
 
 # Initialize submodules
 submodules:
@@ -230,28 +306,17 @@ BINOBJS := $(strip $(foreach d,$(BINDIRS),$(call DEPENDENT_OBJS,$(d))))
 LIBOBJS := $(strip $(foreach d,$(LIBDIRS),$(call DEPENDENT_OBJS,$(d))))
 
 # Generate targets with special root handling
-BINS := $(foreach dir,$(BINDIRS),$(if $(filter . src,$(dir)),$(BINDIR)/$(PRJ)$(EXESUFFIX),$(BINDIR)/$(call CLEAN_BINNAME,$(dir))$(EXESUFFIX)))
-LIBS := $(foreach dir,$(LIBDIRS),$(if $(filter . src,$(dir)),$(LIBDIR)/$(PRJ).a,$(LIBDIR)/lib$(call CLEAN_LIBNAME,$(dir)).a))
-SHARED_LIBS := $(foreach dir,$(LIBDIRS),$(if $(filter . src,$(dir)),$(LIBDIR)/$(PRJ)$(LIBSUFFIX),$(LIBDIR)/lib$(call CLEAN_LIBNAME,$(dir))$(LIBSUFFIX)))
+BINS := $(foreach dir,$(BINDIRS),$(BINDIR)/$(call CLEAN_BINNAME,$(dir)))
+LIBS := $(foreach dir,$(LIBDIRS),$(LIBDIR)/$(call CLEAN_LIBNAME,$(dir)))
+SHARED_LIBS := $(LIBS:%.a=%$(LIBSUFFIX))
 
 # External libraries (separate from internal code)
 EXT_LIBDIRS := $(shell [ -d "$(EXTDIR)" ] && find "$(EXTDIR)" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sed 's|$(EXTDIR)/||')
 EXT_STATIC_LIBS := $(foreach ext,$(EXT_LIBDIRS),$(LIBDIR)/lib$(ext).a)
-EXT_SHARED_LIBS := $(foreach ext,$(EXT_LIBDIRS),$(LIBDIR)/lib$(ext)$(LIBSUFFIX))
+EXT_SHARED_LIBS := $(EXT_STATIC_LIBS:%.a=%$(LIBSUFFIX))
 
 # Build external libraries as separate targets
 $(foreach ext,$(EXT_LIBDIRS),$(eval $(call MAKE_EXTERNAL_LIB,$(ext))))
-
-# Build external libraries as separate targets
-define MAKE_EXTERNAL_LIB
-$(LIBDIR)/lib$(1).a: $(shell find $(EXTDIR)/$(1) \( -name '*.c' -o -name '*.cpp' -o -name '*.cc' \) 2>/dev/null | sed 's|$(EXTDIR)/|$(OBJDIR)/lib/|; s|\.\(c\|cpp\|cc\)$$|.\1.o|') | $(LIBDIR)
-	@echo GEN $$@
-	@$$(AR) rcs $$@ $$^
-
-$(LIBDIR)/lib$(1)$(LIBSUFFIX): $(LIBDIR)/lib$(1).a | $(LIBDIR)
-	@echo GEN $$@
-	@$$(CC) -shared -nostartfiles -Wl,--whole-archive $$< -Wl,--no-whole-archive -o $$@
-endef
 
 # Default build (static only)
 build: $(EXT_STATIC_LIBS) $(BINS) $(LIBS)
@@ -259,7 +324,14 @@ build: $(EXT_STATIC_LIBS) $(BINS) $(LIBS)
 # Optional shared libraries
 shared: $(SHARED_LIBS) $(EXT_SHARED_LIBS)
 
+# Generate binary output rules
 $(foreach bin,$(BINDIRS),$(eval $(call MAKE_BIN,$(bin))))
+
+# Generate static library rules
+$(foreach lib,$(LIBDIRS),$(eval $(call MAKE_LIB,$(lib))))
+
+# Generate shared library rules
+$(foreach lib,$(LIBDIRS),$(eval $(call MAKE_SHARED_LIB,$(lib))))
 
 # Create subdirectories in object tree
 $(foreach dir,$(filter-out .,$(SRCDIRS)),$(eval $$(OBJDIR)/$(dir): ; @mkdir -p $$@))
@@ -300,12 +372,6 @@ $(OBJDIR)/lib/%.cc.o: $(EXTDIR)/%.cc | $(OBJDIR)
 	@echo GEN $@
 	@$(CXX) $(CXXFLAGS) -MMD -MP -c $< -o $@
 
-# Generate static library rules
-$(foreach lib,$(LIBDIRS),$(eval $(call MAKE_LIB,$(lib))))
-
-# Generate shared library rules
-$(foreach lib,$(LIBDIRS),$(eval $(call MAKE_SHARED_LIB,$(lib))))
-
 rebuild: clean build
 reshared: clean shared
 
@@ -315,10 +381,14 @@ clean:
 	@rm -rf $(OUTDIR)
 
 # Include dependency files
--include $(DEPS)
+include $(wildcard $(DEPS))
 
 # Catch undefined targets
-%:
-	@$(MAKE) missing
+#%:
+#	@$(MAKE) missing
+
+# Default target is set last
+.DEFAULT_GOAL := $(MKGOAL)
 
 .PHONY: build clean shared submodules rebuild reshared compilers
+endif

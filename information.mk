@@ -48,7 +48,7 @@ usage:
 	@echo "    rebuild      Clean and rebuild"
 	@echo "    reshared     Clean and rebuild shared"
 	@echo
-	@$(foreach mk,$(MKLOCAL),$(foreach target,$(shell grep -o "^[a-zA-Z0-9_-]*-usage:" $(mk) 2>/dev/null | sed 's/:$$//'),$(MAKE) -s -f $(mk) $(target);))
+	@$(foreach mk,$(shell grep -h "^[a-zA-Z0-9_-]*-usage:" $(MKLOCAL) $(MKCORE) 2>/dev/null | sed 's/:$$//'),$(MAKE) -s $(mk);)
 	@echo "  HACKING & EXTEND:"
 	@echo
 	@echo "    init         Add minimum build scripts"
@@ -78,22 +78,21 @@ info: respond
 	@echo "  CXXFLAGS: $(CXXFLAGS)"
 	@echo "  LDFLAGS: $(LDFLAGS)"
 	@echo
-	@$(if $(SRCDIRS),echo "  SRCDIRS: $(SRCDIRS)";)
-	@$(if $(BINDIRS),echo "  BINDIRS: $(BINDIRS)";)
-	@$(if $(LIBDIRS),echo "  LIBDIRS: $(LIBDIRS)";)
+	@$(if $(strip $(BINDIRS)),echo "  BINDIRS: $(BINDIRS)";)
+	@$(if $(strip $(LIBDIRS)),echo "  LIBDIRS: $(LIBDIRS)";)
+	@$(if $(strip $(SRCDIRS)),echo "  SRCDIRS: $(SRCDIRS)";)
 	@echo
-	@$(if $(SRCS),echo "  SOURCES: $(SRCS)";)
-	@$(if $(OBJS),echo "  OBJECTS: $(OBJS)";)
-	@$(if $(BINS),echo "  BINARIES: $(BINS)";)
-	@$(if $(LIBS),echo "  LIBRARIES: $(LIBS)";)
-	@echo
-	@$(if $(BINDIRS),echo -e "\n=== BINARY DEPENDENCIES ===\n";)
-	@$(foreach bin,$(BINDIRS),echo "$(call CLEAN_BINNAME,$(bin)) depends on: $(call DEPENDENT_OBJS,$(bin)) + $(call FIND_RELATED_LIBS,$(bin))";)
-	@$(if $(LIBDIRS),echo -e "\n=== LIBRARY DEPENDENCIES ===\n";)
-	@$(foreach lib,$(LIBDIRS),echo "$(call CLEAN_LIBNAME,$(lib)).a depends on: $(call DEPENDENT_OBJS,$(lib))";)
-	@$(foreach mk,$(MKLOCAL),$(foreach target,$(shell grep -o "^[a-zA-Z0-9_-]*-info:" $(mk) 2>/dev/null | sed 's/:$$//'),$(MAKE) -s -f $(mk) $(target);))
+	@$(if $(strip $(BINS)),echo "  BINARIES: $(BINS)";)
+	@$(if $(strip $(LIBS)),echo "  LIBRARIES: $(LIBS)";)
+	@$(if $(strip $(OBJS)),echo "  OBJECTS: $(OBJS)";)
+	@$(if $(strip $(SRCS)),echo "  SOURCES: $(SRCS)";)
+	@$(if $(strip $(BINDIRS)),echo -e "\n=== BINARY DEPENDENCIES ===\n";)
+	@$(foreach bin,$(BINDIRS),echo "$(call CLEAN_BINNAME,$(bin))  →$(call DEPENDENT_OBJS,$(bin)) $(call RELATED_LIBS,$(bin))";)
+	@$(if $(strip $(LIBDIRS)),echo -e "\n=== LIBRARY DEPENDENCIES ===\n";)
+	@$(foreach lib,$(LIBDIRS),echo "$(call CLEAN_LIBNAME,$(lib))  →$(call DEPENDENT_OBJS,$(lib)) $(call RELATED_LIBS,$(lib))";)
 	@$(if $(COMPS),echo -e "\n=== AVAILABLE COMPILERS ===\n";)
 	@$(foreach C,$(COMPS),echo "$(C): $(foreach A,$(ARCHES),$(if $($(C).$(A)),$(C)-$(A)))";)
+	@$(foreach mk,$(shell grep -h "^[a-zA-Z0-9_-]*-info:" $(MKLOCAL) $(MKCORE) 2>/dev/null | sed 's/:$$//'),$(MAKE) -s $(mk);)
 
 # Help dispatcher
 help-command:
