@@ -13,7 +13,8 @@ $(OUTDIR)/test/%.o: $(CHKDIR)/%.c | $(OUTDIR)/test/
 
 # Testing info
 test-info:
-	@$(if $(TEST_TYPES),echo -e "\n=== AVAILABLE TESTS ===";)
+	@$(if $(strip $(CHKDIR)),echo -e "\n=== AVALIABLE TESTS ===\n";)
+	@$(if $(strip $(CHKDIR)),echo INCLUDE: $(LIBDIR)/$(call CLEAN_LIBNAME,$(firstword $(LIBDIRS))))
 	@$(foreach type,$(TEST_TYPES),\
 		$(eval TESTS := $(shell find $(CHKDIR)/$(type) -maxdepth 1 -name "*.c" -exec basename {} .c \; | sort | awk '{print (NR==1?"":"• ")"$(type)-test-"$$0}'))\
 		$(if $(TESTS),echo -e "\n$(type)-tests → $(TESTS)";))
@@ -82,16 +83,14 @@ endef
 $(foreach type,$(TEST_TYPES),$(eval $(call MAKE_TEST_PATTERNS,$(type))))
 
 # Run a single test
-test-only: $(LIBDIR)/$(call CLEAN_LIBNAME,$(firstword $(LIBDIRS)))
+test-only: $(firstword $(LIBS))
 	@test -n "$(TYPE)" || (echo "TYPE not specified"; exit 1)
 	@test -n "$(TEST)" || (echo "TEST not specified"; exit 1)
 	@test -f "$(CHKDIR)/$(TYPE)/$(TEST).c" || (echo "Test $(CHKDIR)/$(TYPE)/$(TEST).c not found"; exit 1)
 	@mkdir -p $(OUTDIR)/test
-	@$(CC) $(CFLAGS) -I$(CHKDIR) $(CHKDIR)/$(TYPE)/$(TEST).c $(TEST_OBJECTS) \
-		$(LIBDIR)/$(call CLEAN_LIBNAME,$(firstword $(LIBDIRS))) \
+	@$(CC) $(CFLAGS) -I$(CHKDIR) $(CHKDIR)/$(TYPE)/$(TEST).c $(TEST_OBJECTS) $(firstword $(LIBS)) \
 		-o $(OUTDIR)/test/$(TYPE)-$(TEST) $(LDFLAGS)
 	@$(OUTDIR)/test/$(TYPE)-$(TEST)
-
 
 # Single line response with status
 test-line:

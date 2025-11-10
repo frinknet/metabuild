@@ -17,7 +17,7 @@ SPLDIR  := examples demos demo samples src/examples src/demos experiments
 DOCDIR  := docs doc manual documentation
 WEBDIR  := web webroot wwwroot public static
 CHKDIR  := tests test testing testcases check checks
-NOTSRC := EXTDIR SYSDIR TPLDIR SPLDIR DOCDIR WEBDIR CHKDIR
+NOTSRC := CHKDIR EXTDIR SYSDIR TPLDIR SPLDIR DOCDIR WEBDIR
 
 REPO   ?= ghcr.io/frinknet/metabuild
 IMAGE  ?= metabuild

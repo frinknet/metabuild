@@ -28,7 +28,7 @@ metabuild.docker:
 		-u "$(shell id -u):$(shell id -g)" \
 		-v "$(CURDIR):/build" \
 		-e PRJ="$(PRJ)" \
-		$(IMAGE) $(firstword $(MAKEFILE_LIST)) $(if $(MAKECMDGOALS),$(MAKECMDGOALS),$(MKGOAL))
+		$(IMAGE) $(firstword $(MAKEFILE_LIST)) $(MAKEOVERRIDES) $(if $(MAKECMDGOALS),$(MAKECMDGOALS),$(MKGOAL))
 
 %: metabuild.docker
 	@:
@@ -55,8 +55,7 @@ LIBDIR  := $(OUTDIR)/lib
 BINDIR  := $(OUTDIR)/bin
 
 # Exclude fron source searches
-NOTSRCS := $(foreach var,$(NOTSRC),$($(var)))
-NOTFIND := $(foreach dir,$(NOTSRC),-not -path "$(dir)/*")
+NOTSRCS := $(foreach var,$(NOTSRC),$(if $($(var)),$($(var)) $(shell find $($(var)) -mindepth 1 -type d 2>/dev/null | sed 's|^\./||')))
 
 # Add SYSDIR only if it exists
 ifneq ($(wildcard $(SYSDIR)),)
@@ -229,6 +228,15 @@ $(foreach child,$(filter $(LIBDIRS),$(shell find $(1) -mindepth 1 -maxdepth 1 -t
   $(LIBDIR)/$(call CLEAN_LIBNAME,$(child)) )
 endef
 
+# Function to get all parent directories up to SRCDIR
+define PARENT_LIBS
+$(strip \
+  $(eval parent := $(patsubst %/,%,$(dir $(patsubst %/,%,$(1)))))\
+  $(if $(filter-out . $(1),$(parent)),\
+    $(if $(filter-out $(SRCDIR),$(parent)),$(call PARENT_LIBS,$(parent))) \
+    $(filter-out $(BINDIRS),$(parent))))
+endef
+
 # pattern-generate executable rules (link with related libs)
 define MAKE_BIN
 $(BINDIR)/$(call CLEAN_BINNAME,$(1)): $(call DEPENDENT_OBJS,$(1)) $(call RELATED_LIBS,$(1)) | $(BINDIR)
@@ -238,7 +246,8 @@ endef
 
 # pattern-generate static library rules (default)
 define MAKE_LIB
-$(LIBDIR)/$(call CLEAN_LIBNAME,$(1)): $(call DEPENDENT_OBJS,$(1)) | $(LIBDIR)
+$(LIBDIR)/$(call CLEAN_LIBNAME,$(1)): $(call DEPENDENT_OBJS,$(1)) \
+  $$(foreach child,$$(filter $(1)/%,$$(LIBDIRS)),$$(call DEPENDENT_OBJS,$$(child))) | $(LIBDIR)
 	@echo GEN $$@
 	@$$(AR) rcs $$@ $$^
 endef
@@ -262,12 +271,10 @@ $(LIBDIR)/lib$(1)$(LIBSUFFIX): $(LIBDIR)/lib$(1).a | $(LIBDIR)
 endef
 
 # Get all directories containing C files (excluding NOTSRC)
-SRCDIRS := $(shell \
-  { find "$(SRCDIR)" -type f \( -name '*.c' -o -name '*.cpp' -o -name '*.cc' \) \
-    $(NOTFIND) -print 2>/dev/null; \
-    find "." -maxdepth 1 -type f \( -name '*.c' -o -name '*.cpp' -o -name '*.cc' \) \
-    $(NOTFIND) -print 2>/dev/null; \
-  } | sed 's|/[^/]*$$||; s|^\./$$|.|' | sort -u)
+SRCDIRS := $(filter-out $(NOTSRCS),$(shell \
+  { find "$(SRCDIR)" -type f \( -name '*.c' -o -name '*.cpp' -o -name '*.cc' \) -print 2>/dev/null; \
+    find "." -maxdepth 1 -type f \( -name '*.c' -o -name '*.cpp' -o -name '*.cc' \) -print 2>/dev/null; \
+  } | sed 's|/[^/]*$$||; s|^\./||' | sort -u))
 
 # Get all directories containing C files
 SRCS := $(foreach dir,$(SRCDIRS),$(shell \
@@ -280,10 +287,6 @@ DEPS := $(OBJS:.o=.d)
 EXTSRCS := $(shell [ -d "$(EXTDIR)" ] && find "$(EXTDIR)" -type f \( -name '*.c' -o -name '*.cpp' -o -name '*.cc' \) 2>/dev/null)
 EXTOBJS := $(EXTSRCS:$(EXTDIR)/%=$(OBJDIR)/lib/%.o)
 
-# Include paths
-include $(MKLOCAL)
-include $(MKCORE)
-
 # Initialize submodules
 submodules:
 	@git submodule update --init --depth=1
@@ -294,6 +297,9 @@ version:
 # Separate executables from libraries based on main() presence
 BINDIRS := $(foreach dir,$(SRCDIRS),$(if $(filter-out 0,$(call HAS_MAIN,$(dir))),$(dir)))
 LIBDIRS := $(filter-out $(BINDIRS),$(SRCDIRS))
+
+# Add parent directories to LIBDIRS for aggregation
+LIBDIRS := $(sort $(LIBDIRS) $(foreach dir,$(LIBDIRS),$(call PARENT_LIBS,$(dir))))
 
 # Parsing directory structure
 BINOBJS := $(strip $(foreach d,$(BINDIRS),$(call DEPENDENT_OBJS,$(d))))
@@ -308,6 +314,34 @@ SHARED_LIBS := $(LIBS:%.a=%$(LIBSUFFIX))
 EXT_LIBDIRS := $(shell [ -d "$(EXTDIR)" ] && find "$(EXTDIR)" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sed 's|$(EXTDIR)/||')
 EXT_STATIC_LIBS := $(foreach ext,$(EXT_LIBDIRS),$(LIBDIR)/lib$(ext).a)
 EXT_SHARED_LIBS := $(EXT_STATIC_LIBS:%.a=%$(LIBSUFFIX))
+
+debug:
+	@echo "=== DEBUG INFO ==="
+	@echo "SRCDIR: $(SRCDIR)"
+	@echo "SRCDIRS: $(SRCDIRS)"
+	@echo "BINDIRS: $(BINDIRS)"
+	@echo "LIBDIRS: $(LIBDIRS)"
+	@echo ""
+	@echo "=== PARENT_LIBS TEST ==="
+	@$(foreach dir,$(LIBDIRS),echo "PARENT_LIBS($(dir)): $(call PARENT_LIBS,$(dir))";)
+	@echo ""
+	@echo "=== LIBRARY GENERATION ==="
+	@echo "LIBS: $(LIBS)"
+	@echo ""
+	@echo "=== LIBOBJS ==="
+	@echo "LIBOBJS: $(LIBOBJS)"
+	@echo ""
+	@echo "=== GENERATED LIB RULES ==="
+	@$(foreach lib,$(LIBDIRS),echo "Generated rule for: $(LIBDIR)/$(call CLEAN_LIBNAME,$(lib))";)
+	@echo ""
+	@echo "=== GENERATED PARENT LIB RULES ==="
+	@$(foreach dir,$(LIBDIRS),$(foreach parent,$(call PARENT_LIBS,$(dir)),echo "Generated rule for parent: $(LIBDIR)/$(call CLEAN_LIBNAME,$(parent))";))
+
+.PHONY: debug
+
+# Include paths
+include $(MKLOCAL)
+include $(MKCORE)
 
 # Build external libraries as separate targets
 $(foreach ext,$(EXT_LIBDIRS),$(eval $(call MAKE_EXTERNAL_LIB,$(ext))))

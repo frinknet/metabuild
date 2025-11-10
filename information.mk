@@ -59,12 +59,12 @@ usage:
 	@echo
 
 # show nice failure
-failed:
-	@echo "  command failed"
+failed: respond
+	@echo -e "  WELL UNTIL YOU BREAK IT!!!\n  And that command failed...\n"
 
 # show nice missing
-missing:
-	@echo "  command does not exist"
+missing: respond
+	@echo -e "  WHEN the COMMAND IS REAL!!!\n  That command doesn,t exist.\n"
 
 # Diagnostic info
 info: respond
@@ -78,9 +78,9 @@ info: respond
 	@echo "  CXXFLAGS: $(CXXFLAGS)"
 	@echo "  LDFLAGS: $(LDFLAGS)"
 	@echo
+	@$(if $(strip $(SRCDIRS)),echo "  SRCDIRS: $(SRCDIRS)";)
 	@$(if $(strip $(BINDIRS)),echo "  BINDIRS: $(BINDIRS)";)
 	@$(if $(strip $(LIBDIRS)),echo "  LIBDIRS: $(LIBDIRS)";)
-	@$(if $(strip $(SRCDIRS)),echo "  SRCDIRS: $(SRCDIRS)";)
 	@echo
 	@$(if $(strip $(BINS)),echo "  BINARIES: $(BINS)";)
 	@$(if $(strip $(LIBS)),echo "  LIBRARIES: $(LIBS)";)
