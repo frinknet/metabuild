@@ -25,9 +25,6 @@ cpmaybe() {
   fi
 }
 
-metabuild() {
-}
-
 case "${1:-}" in
   shell)
     shift
