@@ -25,7 +25,9 @@ metabuild.docker:
 	@docker image inspect $(IMAGE) >/dev/null 2>&1 || (docker pull "$(REPO):latest" || docker build -t "$(IMAGE)" .)
 	@echo "Jumping into ⇢  $(IMAGE)…"
 	@exec docker run --rm -it \
-		-v "$(CURDIR):/work" \
+		-u "$(shell id -u):$(shell id -g)" \
+		-v "$(CURDIR):/build" \
+		-e PRJ="$(PRJ)" \
 		$(IMAGE) $(firstword $(MAKEFILE_LIST)) $(if $(MAKECMDGOALS),$(MAKECMDGOALS),$(MKGOAL))
 
 %: metabuild.docker
@@ -33,14 +35,6 @@ metabuild.docker:
 
 .PHONY: metabuild.docker
 else
-
-local:
-	@echo $(METABUILD)
-
-.PHONY: local
-endif
-
-ifeq (1,0)
 
 # Setup directory structure
 getdir = $(firstword $(foreach d,$(1),$(if $(wildcard $(d)),$(d))))
@@ -287,8 +281,8 @@ EXTSRCS := $(shell [ -d "$(EXTDIR)" ] && find "$(EXTDIR)" -type f \( -name '*.c'
 EXTOBJS := $(EXTSRCS:$(EXTDIR)/%=$(OBJDIR)/lib/%.o)
 
 # Include paths
-#include $(MKLOCAL)
-#include $(MKCORE)
+include $(MKLOCAL)
+include $(MKCORE)
 
 # Initialize submodules
 submodules:

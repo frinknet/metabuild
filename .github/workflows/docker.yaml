@@ -104,6 +104,7 @@ jobs:
           platforms: linux/amd64
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          no-cache: true
 
   # Build multi base image only if relevant files changed
   build-multi:
