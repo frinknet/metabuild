@@ -60,11 +60,11 @@ usage:
 
 # show nice failure
 failed: respond
-	@echo -e "  WELL UNTIL YOU BREAK IT!!!\n  And that command failed...\n"
+	@echo -e "  UNTIL YOU GO AND BREAK IT!\n  Oops... What did you do???\n"
 
 # show nice missing
 missing: respond
-	@echo -e "  WHEN the COMMAND IS REAL!!!\n  That command doesn,t exist.\n"
+	@echo -e "  WHEN YOUR COMMAND EXISTS!!!\n  That command doesn't exist.\n\n"
 
 # Diagnostic info
 info: respond

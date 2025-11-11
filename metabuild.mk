@@ -75,8 +75,8 @@ EXT_HEADER_DIRS = $(shell \
 	-print 2>/dev/null)
 
 # Set bassic flags for compiler and linker
-CFLAGS += $(addprefix -I,$(EXT_HEADER_DIRS)) -fPIC -MMD -MP
-CXXFLAGS += $(addprefix -I,$(EXT_HEADER_DIRS)) -fPIC -MMD -MP
+CFLAGS += $(addprefix -I,$(EXT_HEADER_DIRS)) -fPIC -MD -MP
+CXXFLAGS += $(addprefix -I,$(EXT_HEADER_DIRS)) -fPIC -MD -MP
 LDFLAGS  +=
 LDLIBS	 +=
 
@@ -388,17 +388,17 @@ $(OBJDIR)/%.cc.o: $(SRCDIR)/%.cc | $(OBJDIR)
 $(OBJDIR)/lib/%.c.o: $(EXTDIR)/%.c | $(OBJDIR)
 	@mkdir -p $(dir $@)
 	@echo GEN $@
-	@$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+	@$(CC) $(CFLAGS) -MD -MP -c $< -o $@
 
 $(OBJDIR)/lib/%.cpp.o: $(EXTDIR)/%.cpp | $(OBJDIR)
 	@mkdir -p $(dir $@)
 	@echo GEN $@
-	@$(CXX) $(CXXFLAGS) -MMD -MP -c $< -o $@
+	@$(CXX) $(CXXFLAGS) -MD -MP -c $< -o $@
 
 $(OBJDIR)/lib/%.cc.o: $(EXTDIR)/%.cc | $(OBJDIR)
 	@mkdir -p $(dir $@)
 	@echo GEN $@
-	@$(CXX) $(CXXFLAGS) -MMD -MP -c $< -o $@
+	@$(CXX) $(CXXFLAGS) -MD -MP -c $< -o $@
 
 rebuild: clean build
 reshared: clean shared
@@ -412,8 +412,8 @@ clean:
 include $(wildcard $(DEPS))
 
 # Catch undefined targets
-#%:
-#	@$(MAKE) missing
+%:
+	@$(MAKE) missing
 
 # Default target is set last
 .DEFAULT_GOAL := $(MKGOAL)
