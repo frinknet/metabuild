@@ -94,10 +94,14 @@ info: respond
 	@$(foreach C,$(COMPS),echo "$(C): $(foreach A,$(ARCHES),$(if $($(C).$(A)),$(C)-$(A)))";)
 	@$(foreach mk,$(shell grep -h "^[a-zA-Z0-9_-]*-info:" $(MKLOCAL) $(MKCORE) 2>/dev/null | sed 's/:$$//'),$(MAKE) -s $(mk);)
 
+macros: respond
+	@$(if $(COMPS),echo -e "\n=== COMPILER MACROS ===\n";)
+	@$(CC) $(CFLAGS) -dM -E - < /dev/null
+
 # Help dispatcher
 help-command:
 	@$(eval T := $(word 2, $(MKCOMMAND)))
 	@$(if $(T),$(MAKE) respond $(T)-usage 2>/dev/null || $(MAKE) respond missing,$(MAKE) respond usage)
 	@exit 0
 
-.PHONY: respond usage failed missing info help-command
+.PHONY: respond usage failed missing info macros help-command

@@ -61,7 +61,7 @@ NOTSRCS := $(foreach var,$(NOTSRC),$(if $($(var)),$($(var)) $(shell find $($(var
 ifneq ($(wildcard $(SYSDIR)),)
 	CFLAGS	 += -isystem $(SYSDIR)
 	CXXFLAGS += -isystem $(SYSDIR)
-	LDFLAGS  += -static
+	LDFLAGS  += -nostdlib -static
 endif
 
 # Compiler flags using the directory structure
@@ -78,7 +78,7 @@ EXT_HEADER_DIRS = $(shell \
 CFLAGS += $(addprefix -I,$(EXT_HEADER_DIRS)) -fPIC -MD -MP
 CXXFLAGS += $(addprefix -I,$(EXT_HEADER_DIRS)) -fPIC -MD -MP
 LDFLAGS  +=
-LDLIBS	 +=
+LDLIBS   +=
 
 # Get commands
 COMMANDS := $(shell grep -h "^[a-zA-Z0-9_-]*-command:" $(MKLOCAL) $(MKCORE) 2>/dev/null | sed 's/:$$//; s/-command$$//' | sort -u)
@@ -101,61 +101,79 @@ ifneq (,$(filter $(COMMANDS),$(word 1, $(MAKECMDGOALS))))
 	@:
 endif
 
-# Toolchain matrix (completed with real cross-compile paths)
-clang.cc      := clang
-clang.cxx     := clang++
-clang.ld      := -nodefaultlibs
-clang.x86     := -m32
-clang.x64     := -m64
-clang.arm     := --target=arm-linux-gnueabihf
-clang.arm64   := --target=aarch64-linux-gnu
-clang.wasm    := --target=wasm32-unknown-unknown
-clang.wasm.ld := --no-entry --export-dynamic
-clang.wasi    := --target=wasm32-wasi --sysroot=$(WASI_SYSROOT)
+# Toolchain matrix
+clang.cc        := clang
+clang.cxx       := clang++
+clang.cflags    := -flto -ffunction-sections -fdata-sections
+clang.cxxflags  := -flto -ffunction-sections -fdata-sections
+clang.ldflags   := fuse-ld=lld -flto -Wl,--gc-sections -Wl,--icf=safe -nodefaultlibs
+clang.x86       := -m32
+clang.x64       := -m64
+clang.arm       := --target=arm-linux-gnueabihf
+clang.arm64     := --target=aarch64-linux-gnu
+clang.wasm      := --target=wasm32-unknown-unknown
+clang.wasm.ld   := --no-entry --export-dynamic
+clang.wasi      := --target=wasm32-wasi --sysroot=$(WASI_SYSROOT)
 
-gcc.cc        := gcc
-gcc.cxx       := g++
-gcc.x86       := -m32
-gcc.x64       := -m64
-gcc.arm       := # requires cross-gcc
-gcc.arm64     := # requires cross-gcc
+gcc.cc          := gcc
+gcc.cxx         := g++
+gcc.cflags      := -ffunction-sections -fdata-sections
+gcc.cxxflags    := -ffunction-sections -fdata-sections
+gcc.ldflags     := -nodefaultlibs -Wl,--gc-sections -Wl
+gcc.x86         := -m32
+gcc.x64         := -m64
+gcc.arm         := # requires cross-gcc
+gcc.arm64       := # requires cross-gcc
 
-tcc.cc        := tcc
-tcc.cxx       := clang++
-tcc.x86       := -m32
-tcc.x64       := -m64
+tcc.cc          := tcc
+tcc.cxx         := clang++
+tcc.x86         := -m32
+tcc.x64         := -m64
 
-xcc.cc        := xcc
-xcc.cxx       := xcc
-xcc.x86       := -m32
-xcc.x64       := -m64
+xcc.cc          := xcc
+xcc.cxx         := xcc
+xcc.x86         := -m32
+xcc.x64         := -m64
 
-osx.cc        := o64-clang
-osx.cxx       := o64-clang++
-osx.x64       := -mmacosx-version-min=10.13
-osx.arm64     := -target arm64-apple-macos11
+osx.cc          := o64-clang
+osx.cxx         := o64-clang++
+osx.cflags      := -ffunction-sections -fdata-sections
+osx.cxxflags    := -ffunction-sections -fdata-sections
+osx.ldflags     := -nodefaultlibs -Wl,--gc-sections -Wl,--icf=all
+osx.x64         := -mmacosx-version-min=10.13
+osx.arm64       := -target arm64-apple-macos11
 
-win.cc        := x86_64-w64-mingw32-gcc
-win.cxx       := x86_64-w64-mingw32-g++
-win.x86       := -m32
-win.x64       := -m64
+win.cc          := x86_64-w64-mingw32-gcc
+win.cxx         := x86_64-w64-mingw32-g++
+win.cflags      := -ffunction-sections -fdata-sections
+win.cxxflags    := -ffunction-sections -fdata-sections
+win.ldflags     := -nodefaultlibs -Wl,--gc-sections -Wl,--icf=all
+win.x86         := -m32
+win.x64         := -m64
 
-# Runtime assignment (only when COMP/ARCH are set)
-ifdef COMP
-ifdef ARCH
+# Default compiler
+ifndef COMP
+COMP ?= $(firstword $(COMPS))
+endif
+
+# Setup compiler defaults
 CC		 := $($(COMP).cc)
 CXX		 := $($(COMP).cxx)
-CFLAGS	 += $($(COMP).$(ARCH)) $($(COMP).$(ARCH).c)
-CXXFLAGS += $($(COMP).$(ARCH)) $($(COMP).$(ARCH).cxx)
-LDFLAGS  += $($(COMP).ld) $($(COMP).$(ARCH).ld)
+CFLAGS   += $($(COMP).cflags)
+CXXFLAGS += $($(COMP).cxxflags)
+LDFLAGS  += $($(COMP).ldflags)
+
+# Add arch specifics if needed
+ifdef ARCH
+CFLAGS   += $($(COMP).$(ARCH)) $($(COMP).$(ARCH).cflags)
+CXXFLAGS += $($(COMP).$(ARCH)) $($(COMP).$(ARCH).cxxflags)
+LDFLAGS  += $($(COMP).$(ARCH).ldflags)
 TARGET	 := $(COMP)-$(ARCH)
 
 # Verify toolchain exists
 $(if $(CC),,$(error Unknown compiler '$(COMP)'))
 $(if $($(COMP).$(ARCH)),,$(error Unknown arch '$(ARCH)' for '$(COMP)'))
 endif
-endif
-
 # Target platform detection based on cross-compiler
 ifeq ($(COMP),win)
 	PLATFORM := Windows

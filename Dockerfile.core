@@ -6,6 +6,7 @@ RUN apk add --no-cache \
     bash \
     build-base \
     clang \
+    lld \
     tcc \
     wasm-tools \
     make \
