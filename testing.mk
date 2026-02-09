@@ -127,11 +127,15 @@ test-info:
 test-usage:
 	@echo "  TESTING:"
 	@echo
+	@echo "    tests            Show list of tests"
+	@echo
 	@echo "    test             Run all tests"
+	@echo "    test-timing      Time all tests"
+	@echo "    test-profile     Profile tests"
+	@echo
 	#todo show different types of tests
 	#echo "    xxxx-test        Run xxx tests"
 	#echo "    xxxx-test-[name] Run xxx tests"
-	@echo "    tests            Show list of tests"
 	@echo
 
 # Testing missing
@@ -152,6 +156,11 @@ tests: respond test-info
 # Generate all patterns for each discovered test type
 $(foreach type,$(TEST_TYPES),$(eval $(call TEST_DEFINE,$(type))))
 
+ifeq (%-test-%,$(word 1, $(MAKECMDGOALS)))
+%:
+	@:
+endif
+
 # Test targets with pattern matching
 test:
 	@echo "Running all tests..."
@@ -168,7 +177,6 @@ test-only: $(firstword $(LIBS))
 		exit 0; \
 	fi
 	@$(call TEST_SHOW,$(TYPE),$(TEST))
-	@exit 0
 
 # Run all tests for type
 test-each:
@@ -188,4 +196,4 @@ test-profile:
 	@echo "Profiling test suite..."
 	@$(TEST_PERF) $(MAKE) -s test
 
-I.PHONY: test test-each test-only test-profile test-timing test-bench test-memory
+.PHONY: test test-each test-only test-profile test-timing test-bench test-memory

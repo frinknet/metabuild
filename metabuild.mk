@@ -28,7 +28,7 @@ metabuild.docker:
 		-u "$(shell id -u):$(shell id -g)" \
 		-v "$(CURDIR):/build" \
 		-e PRJ="$(PRJ)" \
-		$(IMAGE) $(firstword $(MAKEFILE_LIST)) $(MAKEOVERRIDES) $(if $(MAKECMDGOALS),$(MAKECMDGOALS),$(MKGOAL))
+		$(IMAGE) $(MAKEOVERRIDES) $(if $(MAKECMDGOALS),$(MAKECMDGOALS),$(MKGOAL))
 
 %: metabuild.docker
 	@:
@@ -61,7 +61,7 @@ NOTSRCS := $(foreach var,$(NOTSRC),$(if $($(var)),$($(var)) $(shell find $($(var
 ifneq ($(wildcard $(SYSDIR)),)
 	CFLAGS	 += -isystem $(SYSDIR)
 	CXXFLAGS += -isystem $(SYSDIR)
-	LDFLAGS  += -nostdlib -static
+	LDFLAGS  += -nostdlib -nostartfiles -nodefaultlibs -static
 endif
 
 # Compiler flags using the directory structure
@@ -104,9 +104,9 @@ endif
 # Toolchain matrix
 clang.cc        := clang
 clang.cxx       := clang++
-clang.cflags    := -flto -ffunction-sections -fdata-sections
-clang.cxxflags  := -flto -ffunction-sections -fdata-sections
-clang.ldflags   := fuse-ld=lld -flto -Wl,--gc-sections -Wl,--icf=safe -nodefaultlibs
+clang.cflags    :=  -ffunction-sections -fdata-sections -flto
+clang.cxxflags  :=  -ffunction-sections -fdata-sections -flto
+clang.ldflags   := -fuse-ld=lld -flto -Wl,--gc-sections -Wl,--icf=all
 clang.x86       := -m32
 clang.x64       := -m64
 clang.arm       := --target=arm-linux-gnueabihf
