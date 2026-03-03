@@ -87,7 +87,7 @@ endef
 # Generate ALL pattern rules for each test type
 define TEST_DEFINE
 $(1)-test-%:
-	@$$(MAKE) -s test-only TYPE=$(1) TEST=$$* TEST_FLAGS="$(TEST_FLAGS)"
+	@$$(MAKE) -f $(firstword $(MAKEFILE_LIST)) -s test-only TYPE=$(1) TEST=$$* TEST_FLAGS="$(TEST_FLAGS)"
 
 $(1)-memory-%:
 	@echo "memory profiling $(1)/$$*..."
@@ -97,12 +97,12 @@ $(1)-memory-%:
 
 $(1)-timing-%:
 	@printf "Timing $(1)/$$*: "
-	@$$(TEST_TIMER) $$(MAKE) -s test-only TYPE=$(1) TEST=$$*  | \
+	@$$(TEST_TIMER) $$(MAKE) -f $(firstword $(MAKEFILE_LIST)) -s test-only TYPE=$(1) TEST=$$*  | \
 		grep -E "(User time|System time|Elapsed|resident)" || true
 
 $(1)-profile-%:
 	@echo "Profiling $(1)/$$*..."
-	@$$(TEST_PERF) $$(MAKE) -s test-only TYPE=$(1) TEST=$$*
+	@$$(TEST_PERF) $$(MAKE) -f $(firstword $(MAKEFILE_LIST)) -s test-only TYPE=$(1) TEST=$$*
 endef
 
 # Dynmic test type discovery
@@ -148,9 +148,9 @@ tests: respond test-info
 # Pattern: (TYPE)-test
 %-test:
 	@if [ -d "$(CHKDIR)/$*" ]; then \
-		$(MAKE) -s test-each TYPE=$*; \
+		$(MAKE) -f $(firstword $(MAKEFILE_LIST)) -s test-each TYPE=$*; \
 	else \
-		$(MAKE) -s test-missing; \
+		$(MAKE) -f $(firstword $(MAKEFILE_LIST)) -s test-missing; \
 	fi
 
 # Generate all patterns for each discovered test type
@@ -173,7 +173,7 @@ test-only: $(firstword $(LIBS))
 	@test -n "$(TYPE)" || { echo "TYPE not specified"; exit 1; }
 	@test -n "$(TEST)" || { echo "TEST not specified"; exit 1; }
 	@if ! test -f "$(CHKDIR)/$(TYPE)/$(TEST).c"; then \
-		$(MAKE) -s test-missing; \
+		$(MAKE) -f $(firstword $(MAKEFILE_LIST)) -s test-missing; \
 		exit 0; \
 	fi
 	@$(call TEST_SHOW,$(TYPE),$(TEST))
@@ -188,12 +188,12 @@ test-each:
 test-timing:
 	@echo "Timing test suite..."
 	@printf "Timing $(1)/$$*: "
-	@$(TEST_TIMER) $(MAKE) -s test 2>&1 | \
+	@$(TEST_TIMER) $(MAKE) -f $(firstword $(MAKEFILE_LIST)) -s test 2>&1 | \
 		grep -E "(User time|System time|Elapsed.*real|Maximum resident set size)"
 
 # Profile test suite performance
 test-profile:
 	@echo "Profiling test suite..."
-	@$(TEST_PERF) $(MAKE) -s test
+	@$(TEST_PERF) $(MAKE) -f $(firstword $(MAKEFILE_LIST)) -s test
 
 .PHONY: test test-each test-only test-profile test-timing test-bench test-memory

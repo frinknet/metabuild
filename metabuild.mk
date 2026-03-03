@@ -10,13 +10,14 @@ MKGOAL  ?= help
 MKUSER  := $(CURDIR)/.metabuild/metabuild.mk
 MKROOT  := /metabuild/metabuild.mk
 MKLOCAL := $(filter-out $(MKUSER),$(wildcard $(CURDIR)/.metabuild/*.mk))
-MKCORE := $(filter-out $(MKROOT) $(addprefix /metabuild/,$(notdir $(MKUSER) $(MKLOCAL))),$(wildcard /metabuild/*.mk))
+MKCORE  := $(filter-out $(MKROOT) $(addprefix /metabuild/,$(notdir $(MKUSER) $(MKLOCAL))),$(wildcard /metabuild/*.mk))
 
 # Variables that change
-REPO   ?= ghcr.io/frinknet/metabuild
-IMAGE  ?= metabuild
-ARCHES ?= x86 x64 arm arm64 wasm wasi
-COMPS  ?= clang gcc tcc xcc osx win
+REPO    ?= ghcr.io/frinknet/metabuild
+IMAGE   ?= metabuild
+ARCHES  ?= x86 x64 arm arm64 wasm wasi
+COMPS   ?= clang gcc tcc xcc osx win
+COMP    ?= $(firstword $(COMPS))
 
 # Force Docker (fixed escaping)
 ifeq ($(METABUILD),local)
@@ -37,16 +38,16 @@ metabuild.docker:
 else
 
 # Setup directory structure
-getdir = $(firstword $(foreach d,$(1),$(if $(wildcard $(d)),$(d))))
-EXTDIR  := $(call getdir,$(EXTDIR))
-SYSDIR  := $(call getdir,$(SYSDIR))
-INCDIR  := $(call getdir,$(INCDIR))
-SRCDIR  := $(call getdir,$(SRCDIR))
-TPLDIR  := $(call getdir,$(TPLDIR))
-SPLDIR  := $(call getdir,$(SPLDIR))
-DOCDIR  := $(call getdir,$(DOCDIR))
-WEBDIR  := $(call getdir,$(WEBDIR))
-CHKDIR	:= $(call getdir,$(CHKDIR))
+GETDIR = $(firstword $(foreach d,$(1),$(if $(wildcard $(d)),$(d))))
+EXTDIR  := $(call GETDIR,$(EXTDIR))
+SYSDIR  := $(call GETDIR,$(SYSDIR))
+INCDIR  := $(call GETDIR,$(INCDIR))
+SRCDIR  := $(call GETDIR,$(SRCDIR))
+TPLDIR  := $(call GETDIR,$(TPLDIR))
+SPLDIR  := $(call GETDIR,$(SPLDIR))
+DOCDIR  := $(call GETDIR,$(DOCDIR))
+WEBDIR  := $(call GETDIR,$(WEBDIR))
+CHKDIR	:= $(call GETDIR,$(CHKDIR))
 
 # Output Directories
 OUTDIR  := $(OUTDIR)$(if $(TARGET),/$(TARGET))
@@ -86,7 +87,7 @@ COMMANDS := $(shell grep -h "^[a-zA-Z0-9_-]*-command:" $(MKLOCAL) $(MKCORE) 2>/d
 # Run command dispatch
 define MAP_COMMAND
 $(1):
-	@$(MAKE) -s $(1)-command MKCOMMAND="$(MAKECMDGOALS)"
+	@$(MAKE) -f $(firstword $(MAKEFILE_LIST)) -s $(1)-command MKCOMMAND="$(MAKECMDGOALS)"
 	@exit 0
 
 .PHONY: $(1)
@@ -151,11 +152,6 @@ win.ldflags     := -nodefaultlibs -Wl,--gc-sections -Wl,--icf=all
 win.x86         := -m32
 win.x64         := -m64
 
-# Default compiler
-ifndef COMP
-COMP ?= $(firstword $(COMPS))
-endif
-
 # Setup compiler defaults
 CC		 := $($(COMP).cc)
 CXX		 := $($(COMP).cxx)
@@ -198,11 +194,11 @@ else
 endif
 
 # Matrix target generation
-$(foreach A,$(ARCHES),$(foreach C,$(COMPS),$(eval $(C)-$(A): ; @$$(MAKE) all ARCH=$(A) COMP=$(C))))
+$(foreach A,$(ARCHES),$(foreach C,$(COMPS),$(eval $(C)-$(A): ; @$$(MAKE) -f $(firstword $(MAKEFILE_LIST)) all ARCH=$(A) COMP=$(C))))
 
 # Per-target matrix
 ifdef T
-$(foreach A,$(ARCHES),$(foreach C,$(COMPS),$(eval $(C)-$(A)-$(T): ; @$$(MAKE) $(T) ARCH=$(A) COMP=$(C))))
+$(foreach A,$(ARCHES),$(foreach C,$(COMPS),$(eval $(C)-$(A)-$(T): ; @$$(MAKE) -f $(firstword $(MAKEFILE_LIST)) $(T) ARCH=$(A) COMP=$(C))))
 endif
 
 # Function to check if directory contains C++ files
@@ -431,7 +427,7 @@ include $(wildcard $(DEPS))
 
 # Catch undefined targets
 %:
-	@$(MAKE) missing
+	@$(MAKE) -f $(firstword $(MAKEFILE_LIST)) missing
 
 # Default target is set last
 .DEFAULT_GOAL := $(MKGOAL)

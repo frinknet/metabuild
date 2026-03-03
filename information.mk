@@ -48,7 +48,7 @@ usage: respond
 	@echo "    rebuild      Clean and rebuild"
 	@echo "    reshared     Clean and rebuild shared"
 	@echo
-	@$(foreach mk,$(shell grep -h "^[a-zA-Z0-9_-]*-usage:" $(MKLOCAL) $(MKCORE) 2>/dev/null | sed 's/:$$//'),$(MAKE) -s $(mk) COMP=$(COMP) ARCH=$(ARCH);)
+	@$(foreach mk,$(shell grep -h "^[a-zA-Z0-9_-]*-usage:" $(MKLOCAL) $(MKCORE) 2>/dev/null | sed 's/:$$//'),$(MAKE) -f $(firstword $(MAKEFILE_LIST)) -s $(mk) COMP=$(COMP) ARCH=$(ARCH);)
 	@echo "  HACKING & EXTEND:"
 	@echo
 	@echo "    init         Add minimum build scripts"
@@ -92,7 +92,7 @@ info: respond
 	@$(foreach lib,$(LIBDIRS),echo "$(call CLEAN_LIBNAME,$(lib))  →$(call DEPENDENT_OBJS,$(lib)) $(call RELATED_LIBS,$(lib))";)
 	@$(if $(COMPS),echo -e "\n=== AVAILABLE COMPILERS ===\n";)
 	@$(foreach C,$(COMPS),echo "$(C): $(foreach A,$(ARCHES),$(if $($(C).$(A)),$(C)-$(A)))";)
-	@$(foreach mk,$(shell grep -h "^[a-zA-Z0-9_-]*-info:" $(MKLOCAL) $(MKCORE) 2>/dev/null | sed 's/:$$//'),$(MAKE) -s $(mk) COMP=$(COMP) ARCH=$(ARCH);)
+	@$(foreach mk,$(shell grep -h "^[a-zA-Z0-9_-]*-info:" $(MKLOCAL) $(MKCORE) 2>/dev/null | sed 's/:$$//'),$(MAKE) -f $(firstword $(MAKEFILE_LIST)) -s $(mk) COMP=$(COMP) ARCH=$(ARCH);)
 
 macros: respond
 	@$(if $(COMPS),echo -e "\n=== COMPILER MACROS ===\n";)
@@ -101,7 +101,7 @@ macros: respond
 # Help dispatcher
 help-command:
 	@$(eval T := $(word 2, $(MKCOMMAND)))
-	@$(if $(T),$(MAKE) respond $(T)-usage 2>/dev/null || $(MAKE) missing,$(MAKE) usage)
+	@$(if $(T),$(MAKE) -f $(firstword $(MAKEFILE_LIST)) respond $(T)-usage 2>/dev/null || $(MAKE) -f $(firstword $(MAKEFILE_LIST)) missing,$(MAKE) -f $(firstword $(MAKEFILE_LIST)) usage)
 	@exit 0
 
 .PHONY: respond usage failed missing info macros help-command

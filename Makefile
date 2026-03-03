@@ -6,10 +6,10 @@ ARCHES    ?= x64 x86 arm arm64 wasm wasi
 COMPS     ?= clang gcc tcc xcc osx win
 
 MKGOAL    := help
-CFLAGS   ?= -Wno-unknown-warning-option -g -O0  -fno-omit-frame-pointer -fno-stack-protector
+CFLAGS    ?= -Wno-unknown-warning-option -g -O0  -fno-omit-frame-pointer -fno-stack-protector
 #CFLAGS   ?= -g -O0 -fno-stack-protector
 CXXFLAGS  ?=
-#LDFLAGS   ?= -s
+#LDFLAGS  ?= -s
 
 OUTDIR    := out
 SYSDIR    := syslib

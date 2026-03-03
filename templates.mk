@@ -25,9 +25,9 @@ new-command:
 	# Extract positional arguments (new [tpl] [name])
 	@$(eval tpl := $(word 2, $(MKCOMMAND)))
 	@$(eval name := $(word 3, $(MKCOMMAND)))
-	@test -n "$(tpl)" || ($(MAKE) respond template-usage; exit 1)
-	@test -n "$(name)" || ($(MAKE) respond template-usage; exit 1)
-	@test -d "$(TPLDIR)/$(tpl)" ||($(MAKE) respond template-missing; exit 1)
+	@test -n "$(tpl)" || ($(MAKE) -f $(firstword $(MAKEFILE_LIST)) respond template-usage; exit 1)
+	@test -n "$(name)" || ($(MAKE) -f $(firstword $(MAKEFILE_LIST)) respond template-usage; exit 1)
+	@test -d "$(TPLDIR)/$(tpl)" ||($(MAKE) -f $(firstword $(MAKEFILE_LIST)) respond template-missing; exit 1)
 	@mkdir -p "$(SRCDIR)/$(name)"
 	@echo "Creating $(SRCDIR)/$(name) from template $(tpl)..."
 	@for file in $(TPLDIR)/$(tpl)/*; do \
