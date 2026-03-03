@@ -1,5 +1,5 @@
 # Dockerfile.lite - Adds METABUILD source
-FROM ghcr.io/frinknet/metabuild:latest
+FROM ghcr.io/frinknet/metabuild-core:latest
 
 # Copy METABUILD source
 COPY . /metabuild

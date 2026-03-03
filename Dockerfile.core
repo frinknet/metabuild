@@ -3,17 +3,17 @@ FROM alpine:latest
 
 # Install essential compilation tools
 RUN apk add --no-cache \
-    bash \
-    build-base \
-    clang \
-    lld \
-    tcc \
-    wasm-tools \
-    make \
-    git \
-    curl \
-    linux-tools \
-    bash-completion
+	bash \
+	build-base \
+	clang \
+	lld \
+	tcc \
+	wasm-tools \
+	make \
+	git \
+	curl \
+	linux-tools \
+	bash-completion
 
 # Set up bash environment
 RUN echo 'export PS1="\n\[\e[1;91m\]	\w \[\e[38;5;52m\]\$\[\e[0m\] "' >> /etc/bash/bashrc && \
