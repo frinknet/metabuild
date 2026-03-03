@@ -1,5 +1,5 @@
 # Dockerfile.full - Adds METABUILD source
-ARG BASE_IMAGE=ghcr.io/frinknet/metabuild-multi:latest
+ARG BASE_IMAGE=ghcr.io/frinknet/metabuild:latest
 FROM ${BASE_IMAGE}
 
 # Copy METABUILD source
