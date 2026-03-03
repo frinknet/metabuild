@@ -84,7 +84,7 @@ LDLIBS   +=
 COMMANDS := $(shell grep -h "^[a-zA-Z0-9_-]*-command:" $(MKLOCAL) $(MKCORE) 2>/dev/null | sed 's/:$$//; s/-command$$//' | sort -u)
 
 # Run command dispatch
-define RUN_COMMAND
+define MAP_COMMAND
 $(1):
 	@$(MAKE) -s $(1)-command MKCOMMAND="$(MAKECMDGOALS)"
 	@exit 0
@@ -93,7 +93,7 @@ $(1):
 endef
 
 # Command loopback
-$(foreach cmd,$(COMMANDS),$(eval $(call RUN_COMMAND,$(cmd))))
+$(foreach cmd,$(COMMANDS),$(eval $(call MAP_COMMAND,$(cmd))))
 
 # Guard everything
 ifneq (,$(filter $(COMMANDS),$(word 1, $(MAKECMDGOALS))))
