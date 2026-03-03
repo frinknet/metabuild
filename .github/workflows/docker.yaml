@@ -26,7 +26,7 @@ jobs:
           IMAGE_NAME="ghcr.io/${{ github.repository }}"
 
           # Check if core container exists
-          if docker manifest inspect ${IMAGE_NAME}-core:latest >/dev/null 2>&1; then
+          if docker manifest inspect ${IMAGE_NAME}:core >/dev/null 2>&1; then
             echo "Core container exists, checking for changes..."
 
             CORE_EXISTS=true
@@ -37,7 +37,7 @@ jobs:
           fi
 
           # Check if multi container exists
-          if docker manifest inspect ${IMAGE_NAME}-multi:latest >/dev/null 2>&1; then
+          if docker manifest inspect ${IMAGE_NAME}:multi >/dev/null 2>&1; then
             echo "Multi container exists, checking for changes..."
 
             MULTI_EXISTS=true
@@ -109,7 +109,7 @@ jobs:
           context: .
           file: Dockerfile.core
           push: true
-          tags: ${{ env.IMAGE_NAME }}-core:latest
+          tags: ${{ env.IMAGE_NAME }}:core
           platforms: linux/amd64
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -148,7 +148,7 @@ jobs:
           context: .
           file: Dockerfile.multi
           push: true
-          tags: ${{ env.IMAGE_NAME }}-multi:latest
+          tags: ${{ env.IMAGE_NAME }}:multi
           platforms: linux/amd64
           cache-from: type=gha
           cache-to: type=gha,mode=max
