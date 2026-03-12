@@ -70,14 +70,11 @@ CFLAGS	 += -I$(INCDIR) -I$(EXTDIR)
 CXXFLAGS += -I$(INCDIR) -I$(EXTDIR)
 
 # Smart detection: add each library subdirectory that contains headers
-EXT_HEADER_DIRS = $(shell \
-	[ -d "$(EXTDIR)" ] && \
-	find "$(EXTDIR)" -mindepth 1 -type d -exec test -e "{}/*.h" \; \
-	-print 2>/dev/null)
+EXTDIRS = $(shell find "$(EXTDIR)" -maxdepth 3 -name "*.h" | sed 's|/[^/]*$$||' | sort -u)
 
 # Set bassic flags for compiler and linker
-CFLAGS += $(addprefix -I,$(EXT_HEADER_DIRS)) -fPIC -MD -MP
-CXXFLAGS += $(addprefix -I,$(EXT_HEADER_DIRS)) -fPIC -MD -MP
+CFLAGS += $(addprefix -I,$(EXTDIRS)) -fPIC -MD -MP
+CXXFLAGS += $(addprefix -I,$(EXTDIRS)) -fPIC -MD -MP
 LDFLAGS  +=
 LDLIBS   +=
 
@@ -274,8 +271,10 @@ $(patsubst %.a,%$(LIBSUFFIX),$(LIBDIR)/$(call CLEAN_LIBNAME,$(1))): $(LIBDIR)/$(
 endef
 
 # Build external libraries as separate targets
+#	sed 's|$(EXTDIR)/|$(OBJDIR)/lib/|; s|\.c$|.c.o|g; s|\.cpp$|.cpp.o|g; s|\.cc$|.cc.o|g') | $(LIBDIR)
 define MAKE_EXTERNAL_LIB
-$(LIBDIR)/lib$(1).a: $(shell find $(EXTDIR)/$(1) \( -name '*.c' -o -name '*.cpp' -o -name '*.cc' \) 2>/dev/null | sed 's|$(EXTDIR)/|$(OBJDIR)/lib/|; s|\.\(c\|cpp\|cc\)$$|.\1.o|') | $(LIBDIR)
+$(LIBDIR)/lib$(1).a: $(shell find $(EXTDIR)/$(1) -maxdepth 2 \( -name '*.c' -o -name '*.cpp' -o -name '*.cc' \) 2>/dev/null | \
+	sed 's|$(EXTDIR)/|$(OBJDIR)/lib/|; s|\.c$$|.c.o|; s|\.cpp$$|.cpp.o|; s|\.cc$$|.cc.o|') | $(LIBDIR)
 	@echo GEN $$@
 	@$$(AR) rcs $$@ $$^
 

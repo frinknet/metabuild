@@ -78,14 +78,27 @@ info: respond
 	@echo "  CXXFLAGS: $(CXXFLAGS)"
 	@echo "  LDFLAGS: $(LDFLAGS)"
 	@echo
+	@echo "  EXTDIR: $(EXTDIR)"
+	@echo "  SYSDIR: $(SYSDIR)"
+	@echo "  INCDIR: $(INCDIR)"
+	@echo "  SRCDIR: $(SRCDIR)"
+	@echo "  TPLDIR: $(TPLDIR)"
+	@echo "  SPLDIR: $(SPLDIR)"
+	@echo "  DOCDIR: $(DOCDIR)"
+	@echo "  WEBDIR: $(WEBDIR)"
+	@echo "  CHKDIR: $(CHKDIR)"
+	@echo
 	@$(if $(strip $(SRCDIRS)),echo "  SRCDIRS: $(SRCDIRS)";)
 	@$(if $(strip $(BINDIRS)),echo "  BINDIRS: $(BINDIRS)";)
 	@$(if $(strip $(LIBDIRS)),echo "  LIBDIRS: $(LIBDIRS)";)
+	@$(if $(strip $(EXTDIRS)),echo "  EXTDIRS: $(EXTDIRS)";)
+	@echo "  EXTDIRS: $(EXTDIRS)"
 	@echo
 	@$(if $(strip $(BINS)),echo "  BINARIES: $(BINS)";)
 	@$(if $(strip $(LIBS)),echo "  LIBRARIES: $(LIBS)";)
 	@$(if $(strip $(OBJS)),echo "  OBJECTS: $(OBJS)";)
 	@$(if $(strip $(SRCS)),echo "  SOURCES: $(SRCS)";)
+	@$(if $(strip $(NOTSRCS)),echo "  NOTSRCS: $(NOTSRCS)";)
 	@$(if $(strip $(BINDIRS)),echo -e "\n=== BINARY DEPENDENCIES ===\n";)
 	@$(foreach bin,$(BINDIRS),echo "$(call CLEAN_BINNAME,$(bin))  →$(call DEPENDENT_OBJS,$(bin)) $(call RELATED_LIBS,$(bin))";)
 	@$(if $(strip $(LIBDIRS)),echo -e "\n=== LIBRARY DEPENDENCIES ===\n";)
