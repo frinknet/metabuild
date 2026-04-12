@@ -18,4 +18,7 @@ if ! docker image inspect "$IMAGE" &>/dev/null; then
 fi
 
 # NOW USE IT...
-exec docker run --rm -it -u $(id -u):$(id -g) -v "$PWD:/build" $IMAGE "$@"
+exec docker run --rm -it \
+  -u $(id -u):$(id -g) \
+  -e PRJ="${PWD##*/}" \
+  -v "$PWD:/build" $IMAGE "$@"
