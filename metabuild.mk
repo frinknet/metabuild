@@ -103,8 +103,8 @@ endif
 # Toolchain matrix
 clang.cc        := clang
 clang.cxx       := clang++
-clang.cflags    :=  -ffunction-sections -fdata-sections -flto
-clang.cxxflags  :=  -ffunction-sections -fdata-sections -flto
+clang.cflags    :=  -ffunction-sections -fdata-sections
+clang.cxxflags  :=  -ffunction-sections -fdata-sections
 clang.ldflags   := -fuse-ld=lld -flto -Wl,--gc-sections -Wl,--icf=all
 clang.x86       := -m32
 clang.x64       := -m64
