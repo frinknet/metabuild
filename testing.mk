@@ -4,8 +4,8 @@
 COLOR_HEAD  := \x1b[39m
 COLOR_TEST  := \x1b[93m
 COLOR_PASS  := \x1b[92m
-COLOR_COMP  := \x1b[90m
 COLOR_FAIL  := \x1b[31m
+COLOR_TODO  := \x1b[90m
 COLOR_NORM  := \x1b[0m
 
 # Portability detection
@@ -19,9 +19,11 @@ TEST_FLAGS     := $(foreach w,$(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOA
 # Build a test
 define TEST_BUILD
 mkdir -p $(OUTDIR)/test; \
-if ! $(CC) $(CFLAGS) -I$(CHKDIR) $(CHKDIR)/$(1)/$(2).c $(TEST_OBJECTS) $(firstword $(LIBS)) \
+if [ ! -s $(CHKDIR)/$(1)/$(2).c ]; then \
+	status=-1; \
+elif ! $(CC) $(CFLAGS) -I$(CHKDIR) $(CHKDIR)/$(1)/$(2).c $(TEST_OBJECTS) $(firstword $(LIBS)) \
 	-o $(OUTDIR)/test/$(1)-$(2) $(LDFLAGS) > /dev/null 2>&1; then \
-	status=77; \
+	status=-2; \
 else \
 	status=0; \
 fi
@@ -49,8 +51,10 @@ define TEST_LINE
 $(call TEST_RUN,$(1),$(2)); \
 if [ $$status -eq 0 ]; then \
 	printf "$(COLOR_PASS)[PASS]$(COLOR_NORM)\n"; \
-elif [ $$status -eq 77 ]; then \
-	printf "$(COLOR_COMP) ---- $(COLOR_NORM)\n"; \
+elif [ $$status -eq -1 ]; then \
+	printf "$(COLOR_TODO) ---- $(COLOR_NORM)\n"; \
+elif [ $$status -eq -2 ]; then \
+	printf "$(COLOR_HEAD)~error$(COLOR_NORM)\n"; \
 else \
 	printf "$(COLOR_FAIL)[FAIL]$(COLOR_NORM)\n"; \
 fi
@@ -60,28 +64,30 @@ endef
 define TEST_EACH
 printf "\n  $(COLOR_TEST)Running $(1) tests…$(COLOR_NORM)\n\n"; \
 printf "  $(COLOR_HEAD)$(1)-test suite - $(1) tests$(COLOR_NORM)\n\n"; \
-passed=0; failed=0; errored=0; \
+passed=0; failed=0; errors=0; todo=0;\
 for test in $$(find "$(CHKDIR)/$(1)" -name "*.c" -exec basename {} .c \; | sort); do \
 	printf "  $(COLOR_TEST)%-60s$(COLOR_NORM)" "$(1)-test-$$test"; \
 	$(call TEST_LINE,$(1),$$test); \
-	if [ $$status -eq 0 ]; then \
+	if [ $$status -eq -1 ]; then \
+		todo=`expr $$todo + 1`; \
+	elif [ $$status -eq -2 ]; then \
+		errors=`expr $$errors + 1`; \
+	elif [ $$status -eq 0 ]; then \
 		passed=`expr $$passed + 1`; \
-	elif [ $$status -eq 77 ]; then \
-		errored=`expr $$errored + 1`; \
 	else \
 		failed=`expr $$failed + 1`; \
 	fi; \
 done; \
-total=`expr $$passed + $$failed + $$errored`; \
-if [ $$errored -eq 0 ]; then \
-	printf "\n$(COLOR_PASS)  🎉 ALL CHECKS PASSED 🎉$(COLOR_NORM)\n"; \
-elif [ $$failed -eq 0 ]; then \
+tests=`expr $$passed + $$failed + $$errors`; \
+if [ $$todo -gt 0 ]; then \
+	printf "\n$(COLOR_HEAD)  🚨 SYNTAX ERRORS!!! 🚨$(COLOR_NORM)\n"; \
+elif [ $$failed -gt 0 ]; then \
 	printf "\n$(COLOR_FAIL)  ❌ SOME CHECKS FAILED ❌$(COLOR_NORM)\n"; \
 else \
-	printf "\n$(COLOR_COMP)  🚨 COMPILER ISSUES!!! 🚨$(COLOR_NORM)\n"; \
+	printf "\n$(COLOR_PASS)  🎉 ALL CHECKS PASSED 🎉$(COLOR_NORM)\n"; \
 fi; \
-printf "\n  $(COLOR_TEST)%d total   $(COLOR_PASS)%d passed   $(COLOR_FAIL)%d failed   $(COLOR_COMP)%d errors$(COLOR_NORM)\n\n" \
-	$$total $$passed $$failed $$errored
+printf "\n  $(COLOR_TEST)%d tests   $(COLOR_PASS)%d passed   $(COLOR_FAIL)%d failed   $(COLOR_HEAD)%d errors   $(COLOR_TODO)%d todo$(COLOR_NORM)\n\n" \
+	$$tests $$passed $$failed $$errors $$todo
 endef
 
 # Generate ALL pattern rules for each test type
@@ -91,9 +97,9 @@ $(1)-test-%:
 
 $(1)-memory-%:
 	@echo "memory profiling $(1)/$$*..."
-	@mkdir -p $$(outdir)/test
-	@$$(cc) $$(cflags) -fsanitize=address -i$$(testdir) $$(testdir)/$(1)/$$*.c $$(test_objects) $$(filter %.a,$$(libs)) -o $$(outdir)/test/$(1)-$$*-mem $$(ldflags)
-	@$$(outdir)/test/$(1)-$$*-mem 2>&1 | grep -e "(error|summary|leaked)" || echo "no memory issues detected"
+	@mkdir -p $$(OUTDIR)/test
+	@$$(CC) $$(CFLAGS) -fsanitize=address -i$$(TESTDIR) $$(TESTDIR)/$(1)/$$*.c $$(TEST_OBJECTS) $$(filter %.a,$$(LIBS)) -o $$(OUTDIR)/test/$(1)-$$*-mem $$(LDFLAGS)
+	@$$(OUTDIR)/test/$(1)-$$*-mem 2>&1 | grep -e "(error|summary|leaked)" || echo "no memory issues detected"
 
 $(1)-timing-%:
 	@printf "Timing $(1)/$$*: "

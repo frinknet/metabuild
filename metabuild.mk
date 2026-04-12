@@ -36,6 +36,7 @@ metabuild.docker:
 
 .PHONY: metabuild.docker
 else
+.DEFAULT_GOAL := default
 
 # Setup directory structure
 GETDIR = $(firstword $(foreach d,$(1),$(if $(wildcard $(d)),$(d))))
@@ -429,7 +430,7 @@ include $(wildcard $(DEPS))
 	@$(MAKE) -f $(firstword $(MAKEFILE_LIST)) missing
 
 # Default target is set last
-.DEFAULT_GOAL := $(MKGOAL)
+default: $(MKGOAL)
 
-.PHONY: build clean shared submodules rebuild reshared compilers
+.PHONY: default build clean shared submodules rebuild reshared compilers
 endif

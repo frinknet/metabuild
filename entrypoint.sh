@@ -36,7 +36,7 @@ case "${1:-}" in
   init)
     echo "Installing build runner..."
 
-    for file in build.sh build.bat; do
+    for file in build.sh build.bat Makefile; do
       cpmaybe "/metabuild/$file" .
     done
     ;;
