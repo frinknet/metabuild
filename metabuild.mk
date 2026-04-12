@@ -231,7 +231,8 @@ define CLEAN_LIBNAME
 $(strip \
   $(eval stripped := $(patsubst $(SRCDIR)/%,%,$(patsubst $(SRCDIR),.,$(1))))\
   $(eval subdir := $(if $(filter .,$(stripped)),,$(subst /,-,$(stripped))))\
-  $(if $(filter .,$(1)),$(PRJ),lib$(PRJ)$(if $(subdir),-$(subdir))).a)
+  $(eval prj := $(if $(filter lib%, $(PRJ)), $(patsubst lib%,%,$(PRJ)), $(PRJ)))\
+  $(if $(filter .,$(1)),lib$(prj),lib$(prj)$(if $(subdir),-$(subdir))).a)
 endef
 
 # Function to find related libraries for an executable
@@ -364,7 +365,7 @@ $(foreach ext,$(EXT_LIBDIRS),$(eval $(call MAKE_EXTERNAL_LIB,$(ext))))
 build: $(EXT_STATIC_LIBS) $(BINS) $(LIBS)
 
 # Optional shared libraries
-shared: $(SHARED_LIBS) $(EXT_SHARED_LIBS)
+shared: $(EXT_SHARED_LIBS) $(SHARED_LIBS)
 
 # Generate binary output rules
 $(foreach bin,$(BINDIRS),$(eval $(call MAKE_BIN,$(bin))))
