@@ -21,7 +21,7 @@ COMP    ?= $(firstword $(COMPS))
 
 # Force Docker (fixed escaping)
 ifeq ($(METABUILD),local)
-.DEFAULT_GOAL := metabuild.docker
+#.DEFAULT_GOAL := metabuild.docker
 metabuild.docker:
 	@docker image inspect $(IMAGE) >/dev/null 2>&1 || (docker pull "$(REPO):latest" || docker build -t "$(IMAGE)" .)
 	@echo "Jumping into ⇢  $(IMAGE)…"
@@ -31,8 +31,10 @@ metabuild.docker:
 		-e PRJ="$(PRJ)" \
 		$(IMAGE) $(MAKEOVERRIDES) $(if $(MAKECMDGOALS),$(MAKECMDGOALS),$(MKGOAL))
 
+ifneq ($(MAKECMDGOALS),)
 %: metabuild.docker
 	@:
+endif
 
 .PHONY: metabuild.docker
 else
