@@ -71,7 +71,7 @@ CFLAGS	 += -I$(INCDIR) -I$(EXTDIR)
 CXXFLAGS += -I$(INCDIR) -I$(EXTDIR)
 
 # Smart detection: add each library subdirectory that contains headers
-EXTDIRS = $(shell find "$(EXTDIR)" -maxdepth 3 -name "*.h" | sed 's|/[^/]*$$||' | sort -u)
+EXTDIRS = $(shell find "$(EXTDIR)" -maxdepth 3 -name "*.h" 2>/dev/null | sed 's|/[^/]*$$||' | sort -u)
 
 # Set bassic flags for compiler and linker
 CFLAGS += $(addprefix -I,$(EXTDIRS)) -fPIC -MD -MP
