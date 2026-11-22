@@ -19,6 +19,12 @@ ARCHES  ?= x86 x64 arm arm64 wasm wasi
 COMPS   ?= clang gcc tcc xcc osx win
 COMP    ?= $(firstword $(COMPS))
 
+# Set bassic flags for compiler and linker
+CFLAGS += --sysroot=/host $(addprefix -I,$(EXTDIRS)) -fPIC -MD -MP
+CXXFLAGS += --sysroot=/host $(addprefix -I,$(EXTDIRS)) -fPIC -MD -MP
+LDFLAGS += --sysroot=/host -L/host/lib -L/host/usr/lib -Wl,-rpath,/lib:/usr/lib:/host/lib:/host/usr/lib
+LDLIBS   +=
+
 # Force Docker (fixed escaping)
 ifeq ($(METABUILD),local)
 #.DEFAULT_GOAL := metabuild.docker
@@ -58,28 +64,41 @@ OBJDIR  := $(OUTDIR)/obj
 LIBDIR  := $(OUTDIR)/lib
 BINDIR  := $(OUTDIR)/bin
 
-# Exclude fron source searches
+# Exclude from source searches
+NOTSRC    := CHKDIR EXTDIR SYSDIR TPLDIR SPLDIR DOCDIR WEBDIR
 NOTSRCS := $(foreach var,$(NOTSRC),$(if $($(var)),$($(var)) $(shell find $($(var)) -mindepth 1 -type d 2>/dev/null | sed 's|^\./||')))
+NOTSRCS   += $(NOTDIR) $(shell find $(NOTDIR) -type d 2>/dev/null | sed 's|^\./||')
 
 # Add SYSDIR only if it exists
 ifneq ($(wildcard $(SYSDIR)),)
-	CFLAGS	 += -isystem $(SYSDIR)
-	CXXFLAGS += -isystem $(SYSDIR)
+	CFLAGS	 += -isystem $(SYSDIR) -ffreestanding
+	CXXFLAGS += -isystem $(SYSDIR) -ffreestanding
 	LDFLAGS  += -nostdlib -nostartfiles -nodefaultlibs -static
+else
+	HOST_CRT1 := $(shell find -L /host/lib/ /host/lib64/ /host/usr/lib/ -name "crt1.o" 2>/dev/null | head -n 1)
+	HOST_CRTI := $(shell find -L /host/lib/ /host/lib64/ /host/usr/lib/ -name "crti.o" 2>/dev/null | head -n 1)
+	HOST_CRTN := $(shell find -L /host/lib/ /host/lib64/ /host/usr/lib/ -name "crtn.o" 2>/dev/null | head -n 1)
+	HOST_CRTBEGIN := $(shell find -L /host/usr/lib/ /host/lib/ -name "crtbeginS.o" 2>/dev/null | head -n 1)
+	HOST_CRTEND := $(shell find -L /host/usr/lib/ /host/lib/ -name "crtendS.o" 2>/dev/null | head -n 1)
+
+	CFLAGS   +=  -isystem /host/usr/include -isystem /host/include
+	CXXFLAGS +=  -isystem /host/usr/include -isystem /host/include
+	LDFLAGS  += -nostdlib $(HOST_CRT1) $(HOST_CRTI) $(HOST_CRTBEGIN) -lc -lgcc -lgcc_s $(HOST_CRTEND) $(HOST_CRTN)
 endif
 
 # Compiler flags using the directory structure
 CFLAGS	 += -I$(INCDIR) -I$(EXTDIR)
 CXXFLAGS += -I$(INCDIR) -I$(EXTDIR)
 
+# Dynamically find the host's dynamic linker from the mounted sysroot
+HOSTLD := $(shell find -L /build/syslib/ /host/lib64/ /host/lib/ -name "ld-linux-*.so.*" 2>/dev/null | head -n 1 | sed 's|/host||')
+
+ifneq ($(strip $(HOSTLD)),)
+    LDFLAGS += -Wl,-dynamic-linker,$(strip $(HOSTLD))
+endif
+
 # Smart detection: add each library subdirectory that contains headers
 EXTDIRS = $(shell find "$(EXTDIR)" -maxdepth 3 -name "*.h" 2>/dev/null | sed 's|/[^/]*$$||' | sort -u)
-
-# Set bassic flags for compiler and linker
-CFLAGS += $(addprefix -I,$(EXTDIRS)) -fPIC -MD -MP
-CXXFLAGS += $(addprefix -I,$(EXTDIRS)) -fPIC -MD -MP
-LDFLAGS  +=
-LDLIBS   +=
 
 # Get commands
 COMMANDS := $(shell grep -h "^[a-zA-Z0-9_-]*-command:" $(MKLOCAL) $(MKCORE) 2>/dev/null | sed 's/:$$//; s/-command$$//' | sort -u)
@@ -107,7 +126,7 @@ clang.cc        := clang
 clang.cxx       := clang++
 clang.cflags    :=  -ffunction-sections -fdata-sections
 clang.cxxflags  :=  -ffunction-sections -fdata-sections
-clang.ldflags   := -fuse-ld=lld -flto -Wl,--gc-sections -Wl,--icf=all
+clang.ldflags   := -fuse-ld=lld  -Wl,--gc-sections -Wl,--icf=all
 clang.x86       := -m32
 clang.x64       := -m64
 clang.arm       := --target=arm-linux-gnueabihf
@@ -252,12 +271,20 @@ $(strip \
     $(filter-out $(BINDIRS),$(parent))))
 endef
 
-# pattern-generate executable rules (link with related libs)
+# pattern-generate executable rules (link with related libs and support portable runtime rpath discovery)
 define MAKE_BIN
 $(BINDIR)/$(call CLEAN_BINNAME,$(1)): $(call DEPENDENT_OBJS,$(1)) $(call RELATED_LIBS,$(1)) | $(BINDIR)
 	@echo GEN $$@
-	$(if $(filter-out 0,$(call HAS_CXX,$(1))),$$(CXX),$$(CC)) $$(LDFLAGS) -fPIE $(call DEPENDENT_OBJS,$(1)) $(call RELATED_LIBS,$(1)) -o $$@ $$(LDLIBS)
+	$(if $(filter-out 0,$(call HAS_CXX,$(1))),$$(CXX),$$(CC)) \
+		$$(LDFLAGS) \
+		-fPIE \
+		-Wl,-rpath,'$$ORIGIN/../lib' \
+		-Wl,--enable-new-dtags \
+		$(call DEPENDENT_OBJS,$(1)) \
+		$(call RELATED_LIBS,$(1)) \
+		-o $$@ $$(LDLIBS)
 endef
+
 
 # pattern-generate static library rules (default)
 define MAKE_LIB

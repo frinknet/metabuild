@@ -42,20 +42,29 @@ cat > "$WRAP" <<EOF
 set -eu
 IMAGE="$IMAGE:latest"
 VERSION="$VER"
+
 if [ "\${1:-}" = "update" ]; then
   curl -fsSL "https://github.com/${REPO#*/}/raw/main/install.sh" | exec sh -s -- "\${2:-\$VERSION}"
 elif [ -t 0 ]; then
-  docker run --rm -it \
-    -u "\$(id -u):\$(id -g)" \
-    -v "\$(pwd):/build" \
-    -e PRJ="\${PWD##*/}" \
-    "\$IMAGE" "\$@"
+    docker run --rm -it \
+        -u "\$(id -u):\$(id -g)" \
+        -v "\$(pwd):/build" \
+        -v "/:/host:ro" \
+        -e PKG_CONFIG_PATH="/host/usr/lib/pkgconfig:/host/usr/share/pkgconfig:/host/usr/lib64/pkgconfig:/host/usr/lib/x86_64-linux-gnu/pkgconfig" \
+        -e CPATH="/host/usr/include/x86_64-linux-gnu:/host/usr/include" \
+        -e LIBRARY_PATH="/host/usr/lib:/host/usr/lib64:/host/usr/lib/x86_64-linux-gnu:/usr/lib" \
+        -e PRJ="\${PWD##*/}" \
+        "\$IMAGE" "\$@"
 else
-  docker run --rm -i \
-    -u "\$(id -u):\$(id -g)" \
-    -v "\$(pwd):/build" \
-    -e PRJ="\${PWD##*/}" \
-    "\$IMAGE" "\$@"
+    docker run --rm -i \
+        -u "\$(id -u):\$(id -g)" \
+        -v "\$(pwd):/build" \
+        -v "/:/host:ro" \
+        -e PKG_CONFIG_PATH="/host/usr/lib/pkgconfig:/host/usr/share/pkgconfig:/host/usr/lib64/pkgconfig:/host/usr/lib/x86_64-linux-gnu/pkgconfig" \
+        -e CPATH="/host/usr/include/x86_64-linux-gnu:/host/usr/include" \
+        -e LIBRARY_PATH="/host/usr/lib:/host/usr/lib64:/host/usr/lib/x86_64-linux-gnu:/usr/lib" \
+        -e PRJ="\${PWD##*/}" \
+        "\$IMAGE" "\$@"
 fi
 
 echo
@@ -66,6 +75,5 @@ echo
 echo "✓ installed: $WRAP"
 echo
 "$WRAP" version
-echo
 echo "Run 'metabuild init' to get started."
 echo

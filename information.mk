@@ -72,28 +72,27 @@ info: respond
 	@echo "  PLATFORM: $(PLATFORM)"
 	@echo "  TARGET: $(TARGET)"
 	@echo
-	@echo "  CC: $(CC)"
-	@echo "  CXX: $(CXX)"
-	@echo "  CFLAGS: $(CFLAGS)"
-	@echo "  CXXFLAGS: $(CXXFLAGS)"
-	@echo "  LDFLAGS: $(LDFLAGS)"
+	@echo "  CC       := $(CC)"
+	@echo "  CXX      := $(CXX)"
+	@echo "  CFLAGS   := $(CFLAGS)"
+	@echo "  CXXFLAGS := $(CXXFLAGS)"
+	@echo "  LDFLAGS: := $(LDFLAGS)"
 	@echo
-	@echo "  EXTDIR: $(EXTDIR)"
-	@echo "  SYSDIR: $(SYSDIR)"
-	@echo "  INCDIR: $(INCDIR)"
-	@echo "  SRCDIR: $(SRCDIR)"
-	@echo "  TPLDIR: $(TPLDIR)"
-	@echo "  SPLDIR: $(SPLDIR)"
-	@echo "  DOCDIR: $(DOCDIR)"
-	@echo "  WEBDIR: $(WEBDIR)"
-	@echo "  CHKDIR: $(CHKDIR)"
+	@echo "  EXTDIR := $(EXTDIR)"
+	@echo "  SYSDIR := $(SYSDIR)"
+	@echo "  INCDIR := $(INCDIR)"
+	@echo "  SRCDIR := $(SRCDIR)"
+	@echo "  TPLDIR := $(TPLDIR)"
+	@echo "  SPLDIR := $(SPLDIR)"
+	@echo "  DOCDIR := $(DOCDIR)"
+	@echo "  WEBDIR := $(WEBDIR)"
+	@echo "  CHKDIR := $(CHKDIR)"
 	@echo
-	@$(if $(strip $(SRCDIRS)),echo "  SRCDIRS: $(SRCDIRS)";)
-	@$(if $(strip $(BINDIRS)),echo "  BINDIRS: $(BINDIRS)";)
-	@$(if $(strip $(LIBDIRS)),echo "  LIBDIRS: $(LIBDIRS)";)
-	@$(if $(strip $(EXTDIRS)),echo "  EXTDIRS: $(EXTDIRS)";)
-	@echo "  EXTDIRS: $(EXTDIRS)"
-	@echo
+	@$(if $(strip $(SRCDIRS)),echo "  SRCDIRS := $(SRCDIRS)";)
+	@$(if $(strip $(BINDIRS)),echo "  BINDIRS := $(BINDIRS)";)
+	@$(if $(strip $(LIBDIRS)),echo "  LIBDIRS := $(LIBDIRS)";)
+	@$(if $(strip $(EXTDIRS)),echo "  EXTDIRS := $(EXTDIRS)";)
+	@echo -e "\n=== WORKING DIRECTORIES ===\n";
 	@$(if $(strip $(BINS)),echo "  BINARIES: $(BINS)";)
 	@$(if $(strip $(LIBS)),echo "  LIBRARIES: $(LIBS)";)
 	@$(if $(strip $(OBJS)),echo "  OBJECTS: $(OBJS)";)

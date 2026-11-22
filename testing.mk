@@ -21,8 +21,8 @@ define TEST_BUILD
 mkdir -p $(OUTDIR)/test; \
 if [ ! -s $(CHKDIR)/$(1)/$(2).c ]; then \
 	status=-1; \
-elif ! $(CC) $(CFLAGS) -I$(CHKDIR) $(CHKDIR)/$(1)/$(2).c $(TEST_OBJECTS) $(firstword $(LIBS)) \
-	-o $(OUTDIR)/test/$(1)-$(2) $(LDFLAGS) > /dev/null 2>&1; then \
+elif ! $(CC) $(CFLAGS) -I$(CHKDIR) $(TSFLAGS) $(CHKDIR)/$(1)/$(2).c $(TEST_OBJECTS) \
+	-o $(OUTDIR)/test/$(1)-$(2) $(LDFLAGS); then \
 	status=-2; \
 else \
 	status=0; \
@@ -31,7 +31,7 @@ endef
 
 # Run a test
 define TEST_RUN
-$(call TEST_BUILD,$(1),$(2)); \
+$(call TEST_BUILD,$(1),$(2)) > /dev/null 2>&1; \
 if [ $$status -eq 0 ]; then \
 	$(OUTDIR)/test/$(1)-$(2) $(TEST_FLAGS) > /dev/null 2>&1; \
 	status=$$?; \
@@ -40,10 +40,12 @@ endef
 
 # Run a test
 define TEST_SHOW
-mkdir -p $(OUTDIR)/test && \
-$(CC) $(CFLAGS) -I$(CHKDIR) $(CHKDIR)/$(1)/$(2).c $(TEST_OBJECTS) $(firstword $(LIBS)) \
-	-o $(OUTDIR)/test/$(1)-$(2) $(LDFLAGS) && \
-$(OUTDIR)/test/$(1)-$(2) $(TEST_FLAGS) || true
+$(call TEST_BUILD,$(1),$(2)); \
+if [ $$status -eq 0 ]; then \
+	$(OUTDIR)/test/$(1)-$(2) $(TEST_FLAGS) || true; \
+else \
+	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) -s failed; \
+fi
 endef
 
 # Display one test result
@@ -146,7 +148,7 @@ test-usage:
 
 # Testing missing
 test-missing: respond
-	@echo -e "  WHEN THE TEST IS FOUND!!!\n  That test is missing...\n\n"
+	@echo -e "  IF THE TEST IS EXISTS!!!\n  That test is missing...\n\n"
 
 # List tests
 tests: respond test-info
@@ -175,14 +177,15 @@ test:
 	done
 
 # Run a single test
-test-only: $(firstword $(LIBS))
+test-only:
 	@test -n "$(TYPE)" || { echo "TYPE not specified"; exit 1; }
 	@test -n "$(TEST)" || { echo "TEST not specified"; exit 1; }
 	@if ! test -f "$(CHKDIR)/$(TYPE)/$(TEST).c"; then \
 		$(MAKE) -f $(firstword $(MAKEFILE_LIST)) -s test-missing; \
 		exit 0; \
+	else \
+		$(call TEST_SHOW,$(TYPE),$(TEST)) \
 	fi
-	@$(call TEST_SHOW,$(TYPE),$(TEST))
 
 # Run all tests for type
 test-each:
