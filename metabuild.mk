@@ -20,9 +20,9 @@ COMPS   ?= clang gcc tcc xcc osx win
 COMP    ?= $(firstword $(COMPS))
 
 # Set bassic flags for compiler and linker
-CFLAGS += --sysroot=/host $(addprefix -I,$(EXTDIRS)) -fPIC -MD -MP
-CXXFLAGS += --sysroot=/host $(addprefix -I,$(EXTDIRS)) -fPIC -MD -MP
-LDFLAGS += --sysroot=/host -L/host/lib -L/host/usr/lib -Wl,-rpath,/lib:/usr/lib:/host/lib:/host/usr/lib
+CFLAGS += $(addprefix -I,$(EXTDIRS)) -fPIC -MD -MP
+CXXFLAGS += $(addprefix -I,$(EXTDIRS)) -fPIC -MD -MP
+LDFLAGS  +=
 LDLIBS   +=
 
 # Force Docker (fixed escaping)
@@ -67,35 +67,20 @@ BINDIR  := $(OUTDIR)/bin
 # Exclude from source searches
 NOTSRC    := CHKDIR EXTDIR SYSDIR TPLDIR SPLDIR DOCDIR WEBDIR
 NOTSRCS := $(foreach var,$(NOTSRC),$(if $($(var)),$($(var)) $(shell find $($(var)) -mindepth 1 -type d 2>/dev/null | sed 's|^\./||')))
-NOTSRCS   += $(NOTDIR) $(shell find $(NOTDIR) -type d 2>/dev/null | sed 's|^\./||')
 
 # Add SYSDIR only if it exists
 ifneq ($(wildcard $(SYSDIR)),)
+	unexport CPATH
 	CFLAGS	 += -isystem $(SYSDIR) -ffreestanding
 	CXXFLAGS += -isystem $(SYSDIR) -ffreestanding
 	LDFLAGS  += -nostdlib -nostartfiles -nodefaultlibs -static
 else
-	HOST_CRT1 := $(shell find -L /host/lib/ /host/lib64/ /host/usr/lib/ -name "crt1.o" 2>/dev/null | head -n 1)
-	HOST_CRTI := $(shell find -L /host/lib/ /host/lib64/ /host/usr/lib/ -name "crti.o" 2>/dev/null | head -n 1)
-	HOST_CRTN := $(shell find -L /host/lib/ /host/lib64/ /host/usr/lib/ -name "crtn.o" 2>/dev/null | head -n 1)
-	HOST_CRTBEGIN := $(shell find -L /host/usr/lib/ /host/lib/ -name "crtbeginS.o" 2>/dev/null | head -n 1)
-	HOST_CRTEND := $(shell find -L /host/usr/lib/ /host/lib/ -name "crtendS.o" 2>/dev/null | head -n 1)
-
-	CFLAGS   +=  -isystem /host/usr/include -isystem /host/include
-	CXXFLAGS +=  -isystem /host/usr/include -isystem /host/include
-	LDFLAGS  += -nostdlib $(HOST_CRT1) $(HOST_CRTI) $(HOST_CRTBEGIN) -lc -lgcc -lgcc_s $(HOST_CRTEND) $(HOST_CRTN)
+	LDFLAGS  += -lc -lgcc -lgcc_s
 endif
 
 # Compiler flags using the directory structure
 CFLAGS	 += -I$(INCDIR) -I$(EXTDIR)
 CXXFLAGS += -I$(INCDIR) -I$(EXTDIR)
-
-# Dynamically find the host's dynamic linker from the mounted sysroot
-HOSTLD := $(shell find -L /build/syslib/ /host/lib64/ /host/lib/ -name "ld-linux-*.so.*" 2>/dev/null | head -n 1 | sed 's|/host||')
-
-ifneq ($(strip $(HOSTLD)),)
-    LDFLAGS += -Wl,-dynamic-linker,$(strip $(HOSTLD))
-endif
 
 # Smart detection: add each library subdirectory that contains headers
 EXTDIRS = $(shell find "$(EXTDIR)" -maxdepth 3 -name "*.h" 2>/dev/null | sed 's|/[^/]*$$||' | sort -u)
@@ -139,7 +124,7 @@ gcc.cc          := gcc
 gcc.cxx         := g++
 gcc.cflags      := -ffunction-sections -fdata-sections
 gcc.cxxflags    := -ffunction-sections -fdata-sections
-gcc.ldflags     := -nodefaultlibs -Wl,--gc-sections -Wl
+gcc.ldflags     := -nodefaultlibs -Wl,--gc-sections
 gcc.x86         := -m32
 gcc.x64         := -m64
 gcc.arm         := # requires cross-gcc
